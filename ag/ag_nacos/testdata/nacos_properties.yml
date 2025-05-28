@@ -1,0 +1,15 @@
+nacos:
+  config:
+      enableconfig: true
+      enablenaming: true
+      serveraddr: "1.1.1.1:8848,2.2.2.2:8848"
+      namespace: "hzw_ns"
+      username: nacos
+      password: nacos
+      dataids:
+        - dataid: "aic_1.yaml"
+          group: "DEFAULT_GROUP"
+          type: yaml
+        - dataid: "aic_2.yaml"
+          group: "DEFAULT_GROUP"
+          type: yaml
