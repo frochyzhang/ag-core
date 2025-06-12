@@ -25,6 +25,7 @@ func NewZapHandler(logger *zap.Logger) *ZapHandler {
 // / NewZapSlog 创建zap封装的slog
 func NewZapSlog(zapHandler *ZapHandler) *slog.Logger {
 	slogger := slog.New(zapHandler)
+	slogger.Info("slog init", "hander", zapHandler)
 	slog.SetDefault(slogger) // slog设置全局实现
 	return slogger
 }

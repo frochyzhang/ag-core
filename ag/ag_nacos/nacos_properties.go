@@ -7,10 +7,10 @@ const (
 
 // NacosConfigProperties nacos config properties
 type NacosConfigProperties struct {
-	EnableConfig bool   `value:"${enableconfig:=true}"`
-	EnableNaming bool   `value:"${enablenaming:=true}"`
-	Schema       string `value:"${schema:=http}"`
-	ContextPath  string `value:"${contextpath:=/nacos}"`
+	EnableConfig bool   `value:"${enableconfig:true}"`
+	EnableNaming bool   `value:"${enablenaming:true}"`
+	Schema       string `value:"${schema:http}"`
+	ContextPath  string `value:"${contextpath:/nacos}"`
 	ServerAddr   string `value:"${serveraddr}"`
 	NameSpace    string `value:"${namespace}"`
 	UserName     string `value:"${username}"`
@@ -25,7 +25,7 @@ type DataIDInfo struct {
 	Group  string `value:"${group}"`  //required
 	Type   string `value:"${type}"`   //required
 
-	AutoRefresh bool `value:"${autorefresh:=true}"`
+	AutoRefresh bool `value:"${autorefresh:true}"`
 	// First       bool `value:"${first:false}"`
 	// Before      bool `value:"${before:false}"`
 	// After       bool `value:"${after:false}"`

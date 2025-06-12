@@ -2,17 +2,21 @@ package kitex
 
 import (
 	"ag-core/ag/ag_conf"
+	"ag-core/ag/ag_ext/ip"
 	"context"
 	"fmt"
 	"log/slog"
 	"net"
+	"time"
 
-	"github.com/cloudwego/kitex/pkg/remote/connpool"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/grpc"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/stats"
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
 	"github.com/kitex-contrib/registry-nacos/registry"
+
+	kregistry "github.com/cloudwego/kitex/pkg/registry"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
 	"github.com/spf13/cast"
 )
@@ -26,13 +30,13 @@ type Server struct {
 func NewServer(
 	svr server.Server,
 	logger *slog.Logger,
-	creporter *HzwKCReporter,
+	// creporter *HzwKCReporter,
 ) *Server {
 	s := &Server{
 		ksvr:   svr,
 		logger: logger,
 	}
-	connpool.SetReporter(creporter) // 注册自定义连接池监控，TODO是否有用？
+	// connpool.SetReporter(creporter) // 注册自定义连接池监控，TODO是否有用？
 	return s
 }
 
@@ -57,22 +61,22 @@ func (s *Server) Stop(ctx context.Context) error {
 	return s.ksvr.Stop()
 }
 
-// HzwKCReporter 自定义连接池监控
-type HzwKCReporter struct{}
+// // HzwKCReporter 自定义连接池监控
+// type HzwKCReporter struct{}
 
-func NewHzwKCReporter() *HzwKCReporter {
-	return &HzwKCReporter{}
-}
+// func NewHzwKCReporter() *HzwKCReporter {
+// 	return &HzwKCReporter{}
+// }
 
-func (r *HzwKCReporter) ConnSucceed(poolType connpool.ConnectionPoolType, serviceName string, addr net.Addr) {
-	fmt.Printf("ConnSucceed poolType:%d, serviceName:%s, addr:%v\n", poolType, serviceName, addr)
-}
-func (r *HzwKCReporter) ConnFailed(poolType connpool.ConnectionPoolType, serviceName string, addr net.Addr) {
-	fmt.Printf("ConnFailed poolType:%d, serviceName:%s, addr:%v\n", poolType, serviceName, addr)
-}
-func (r *HzwKCReporter) ReuseSucceed(poolType connpool.ConnectionPoolType, serviceName string, addr net.Addr) {
-	fmt.Printf("ReuseSucceed poolType:%d, serviceName:%s, addr:%v\n", poolType, serviceName, addr)
-}
+// func (r *HzwKCReporter) ConnSucceed(poolType connpool.ConnectionPoolType, serviceName string, addr net.Addr) {
+// 	fmt.Printf("ConnSucceed poolType:%d, serviceName:%s, addr:%v\n", poolType, serviceName, addr)
+// }
+// func (r *HzwKCReporter) ConnFailed(poolType connpool.ConnectionPoolType, serviceName string, addr net.Addr) {
+// 	fmt.Printf("ConnFailed poolType:%d, serviceName:%s, addr:%v\n", poolType, serviceName, addr)
+// }
+// func (r *HzwKCReporter) ReuseSucceed(poolType connpool.ConnectionPoolType, serviceName string, addr net.Addr) {
+// 	fmt.Printf("ReuseSucceed poolType:%d, serviceName:%s, addr:%v\n", poolType, serviceName, addr)
+// }
 
 // NewKitexOriginalServer 创建原始的kitex服务实例
 func NewKitexOriginalServer(
@@ -108,8 +112,15 @@ func NewKitexOriginalServer(
 		server.WithServiceAddr(addr),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: endpoint}),
+		// server.WithExitWaitTime(30 * time.Second), // 优雅停机等待时间
 		// server.WithStatsLevel(stats.LevelDetailed),
+		// server.WithMaxConnIdleTime(time.Second * 30),
+		server.WithGRPCKeepaliveParams(grpc.ServerKeepalive{ // 设置GRPC Keepalive参数 TODO 修改为配置配置方式
+			MaxConnectionIdle: time.Second * 50, // 最大空闲连接时间
+		}),
 		server.WithStatsLevel(stats.LevelDisabled),
+		// server.WithMiddleware()
+		// server.WithSuite(...), // TODO 调整修改为Suite的方式统一管理
 	}
 	if client != nil {
 		slog.Info("kitex server enable nacos naming")
@@ -118,4 +129,151 @@ func NewKitexOriginalServer(
 	svr := server.NewServer(options...)
 
 	return svr
+}
+
+func NewKitexServerWithSuit(
+	suite server.Suite,
+) server.Server {
+	svr := server.NewServer(server.WithSuite(suite))
+	return svr
+}
+
+type KitexOpSuite struct {
+	Opts []server.Option
+}
+
+func (s *KitexOpSuite) Options() []server.Option {
+	return s.Opts
+}
+
+type KitexSuiteBuilder struct {
+	Env    ag_conf.IConfigurableEnvironment
+	Binder ag_conf.IBinder
+
+	CustOptions []server.Option
+
+	NamingClient naming_client.INamingClient
+}
+
+func (builder *KitexSuiteBuilder) BuildSuite() (server.Suite, error) {
+	suite := &KitexOpSuite{
+		Opts: make([]server.Option, 0),
+	}
+
+	// 自定义的配置项
+	suite.Opts = append(suite.Opts, builder.CustOptions...)
+
+	var kconf KitexServerProperties
+	err := builder.Binder.Bind(&kconf, KitexServerPropertiesPrefix)
+	if err != nil {
+		slog.Error("kitex server config error", "err", err)
+		return nil, err
+	}
+
+	// 注册中心配置
+	if builder.NamingClient != nil {
+		slog.Info("kitex server enable nacos naming")
+		suite.Opts = append(suite.Opts, server.WithRegistry(registry.NewNacosRegistry(builder.NamingClient)))
+	}
+
+	// 服务地址配置
+	host, port, err := findKitexHostPort(kconf)
+	if err != nil {
+		return nil, err
+	}
+	kitexHostStr := fmt.Sprintf("%s:%d", host, port)
+	slog.Info("kitex", "host", kitexHostStr)
+	addr, err := net.ResolveTCPAddr("tcp", kitexHostStr)
+	if err != nil {
+		return nil, fmt.Errorf("kitex host error: %w", err)
+	}
+	suite.Opts = append(suite.Opts, server.WithServiceAddr(addr))
+
+	// 服务信息配置
+	sname := kconf.ServiceName
+	if sname == "" {
+		sname = "kitex-server"
+	}
+	info := &rpcinfo.EndpointBasicInfo{
+		ServiceName: sname,
+	}
+	suite.Opts = append(suite.Opts, server.WithServerBasicInfo(info))
+
+	// 自定义注册信息
+	regInfo := &kregistry.Info{}
+	regInfo.Weight = 1
+	if kconf.EnableIPRange != "" {
+		ipranger, err := ip.NewIPRanger(kconf.EnableIPRange)
+		if err != nil {
+			return nil, err
+		}
+		host, ok, err := ipranger.GetLocalIP()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			slog.Info("kitex server enable ip range", "regAddr", fmt.Sprintf("%s:%d", host, port))
+			regInfo.SkipListenAddr = true
+			regInfo.Addr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	suite.Opts = append(suite.Opts, server.WithRegistryInfo(regInfo))
+
+	// Grpc配置
+	if kconf.Grpc.Enable {
+		gskeep := grpc.ServerKeepalive{}
+		if kconf.Grpc.MaxConnectionIdle > 0 {
+			// 最大空闲连接时间
+			gskeep.MaxConnectionIdle = time.Second * time.Duration(kconf.Grpc.MaxConnectionIdle)
+		}
+		suite.Opts = append(suite.Opts, server.WithGRPCKeepaliveParams(gskeep))
+
+		server.WithMetaHandler(transmeta.ClientHTTP2Handler)
+	}
+
+	// options := []server.Option{
+	// 	server.WithServiceAddr(addr),
+	// 	server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+	// 	server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: sname}),
+	// 	server.WithGRPCKeepaliveParams(grpc.ServerKeepalive{ // 设置GRPC Keepalive参数 TODO 修改为配置配置方式
+	// 		MaxConnectionIdle: time.Second * 50, // 最大空闲连接时间
+	// 	}),
+	// 	server.WithStatsLevel(stats.LevelDisabled),
+	// }
+
+	return suite, nil
+}
+
+func findKitexHostPort(kconf KitexServerProperties) (host string, port int, rerr error) {
+	// 服务ip、端口配置
+	host = kconf.Host
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
+	if !ip.IsHostAvailable(host) {
+		return "", 0, fmt.Errorf("kitex host unavailable: %s", host)
+	}
+
+	port = kconf.Port
+	if kconf.AdaptivePort {
+		slog.Info("kitex server enable adaptive port")
+		if port == 0 {
+			port = DefaultKitexOriginPort
+		}
+		port, rerr = ip.GetAvailablePort(host, port)
+		if rerr != nil {
+			return
+		}
+	} else {
+		if port == 0 {
+			return host, port, fmt.Errorf("kitex port invalid:%v", port)
+		}
+	}
+
+	slog.Info(fmt.Sprintf("finded kitex host:%s, port:%d", host, port))
+	return
 }

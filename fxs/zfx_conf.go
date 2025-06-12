@@ -22,5 +22,10 @@ var FxAgConfModule = fx.Module("ag_conf",
 var FxConfLocMode = fx.Module(
 	"fx_conf_local",
 	// LoadLocalConfig 构造使用了 embed.FS,目前需要应用main提前使用Supply等方式提供依赖
-	fx.Invoke(ag_conf.LoadLocalConfig),
+	fx.Provide(
+		ag_conf.LoadLocalConfigToState,
+	),
+	fx.Invoke(
+		ag_conf.LoadLocalConfig,
+	),
 )

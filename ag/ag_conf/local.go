@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 const (
@@ -26,11 +27,29 @@ const (
 	LocalProfilePropertiesSource string = "LocalProfilePropertiesSource"
 )
 
+type LocalConfigLoded string
+
+var localConfLoadOnce sync.Once
+
 // LoadLocalConfig 加载本地配置 本地支持yaml|yml|properties后缀的三个文件
 // 1. 先判断环境变量或者进程变量中是否配置app.conf对应的key的值,未配置取执行二进制文件中的app.suffix文件
 // 2. 获取app.profile的环境的设置,例如dev,sit,uat等
 // 3. 如果1的场景未配置，则按照app.suffix app_profile.suffix的顺序加载,后续的内容会覆盖前者
 func LoadLocalConfig(env IConfigurableEnvironment, localEmbed embed.FS) {
+	localConfLoadOnce.Do(
+		func() {
+			doLoadLocalConfig(env, localEmbed)
+		},
+	)
+}
+
+func LoadLocalConfigToState(env IConfigurableEnvironment, localEmbed embed.FS) LocalConfigLoded {
+	LoadLocalConfig(env, localEmbed)
+	return "localConfigLoaded"
+}
+
+func doLoadLocalConfig(env IConfigurableEnvironment, localEmbed embed.FS) {
+	slog.Info("--- LoadLocalConfig ---")
 	// 1. 判断 os 或者env中是否设置文件路径
 	appConf := env.GetProperty("app.conf")
 

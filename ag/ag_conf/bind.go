@@ -11,12 +11,20 @@ import (
 	"github.com/spf13/cast"
 )
 
+const (
+	BinderPlaceholderPrefix string = "${"
+	BinderPlaceholderSuffix string = "}"
+	BinderValueSeparator    string = ":"
+)
+
 var (
 	ErrNotExist        = errors.New("not exist")
 	ErrInvalidSyntax   = errors.New("invalid syntax")
 	ErrUnBindableType  = errors.New("unbindable type")
 	ErrUnsupportedType = errors.New("unsupported type")
 )
+
+var Binder IBinder
 
 type IBinder interface {
 	Bind(i any, name ...string) error
@@ -36,18 +44,21 @@ func NewConfigurationPropertiesBinder(env IConfigurableEnvironment) *Configurati
 	cpb.env = env
 	cpb.propertySources = env.GetPropertySources()
 
+	Binder = cpb
 	return cpb
 }
 
 // Bind 从指定env中绑定配置到指定的结构体
 func (cpb *ConfigurationPropertiesBinder) Bind(i any, name ...string) error {
-	// TODO i 可能是nil
 	/* - 获取反射Value，并判断是否为指针类型，并解引用 */
 	var v reflect.Value
 	{
 		switch e := i.(type) {
 		case reflect.Value:
 			v = e
+			if !v.IsValid() {
+				return errors.New("bind value is an invalid reflect.Value")
+			}
 		default:
 			v = reflect.ValueOf(i)
 			if v.Kind() != reflect.Ptr { // 传入的绑定对象必须是指针，否则Canset为false，无法通过反射赋值
@@ -55,6 +66,9 @@ func (cpb *ConfigurationPropertiesBinder) Bind(i any, name ...string) error {
 				return errors.New("bind value should be a ptr")
 			}
 			v = v.Elem() // 获取指针指向的元素
+			if !v.IsValid() {
+				return errors.New("bind value points to invalid value")
+			}
 		}
 	}
 
@@ -82,13 +96,12 @@ func (cpb *ConfigurationPropertiesBinder) Bind(i any, name ...string) error {
 	}
 	rootparam.Path = typeName
 
-	// TODO 绑定结果如何返回，是否需要BindResult参与
 	return cpb.BindValue(v, rootparam)
 }
 
 // BindValue 绑定值
 func (cpb *ConfigurationPropertiesBinder) BindValue(v reflect.Value, param BindParam) (rterr error) {
-
+	slog.Debug("bind value", "key", param.Key)
 	defer func() {
 		if rterr != nil {
 			// TODO 绑定异常是否需要额外处理
@@ -99,10 +112,8 @@ func (cpb *ConfigurationPropertiesBinder) BindValue(v reflect.Value, param BindP
 		err := errors.New("can not set value")
 		return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
 	}
-	// TODO 检查Value的类型范围，只允许指定范围的类型
+	// 检查Value的类型范围，只允许指定范围的类型
 	if !IsBindableType(v.Type()) { // 此处的判断要保障下面代码的正确性
-		// err := errors.New("target should be value type")
-		// err := fmt.Errorf("unbindable type:%s", v.Type().String())
 		return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), ErrUnBindableType)
 	}
 
@@ -222,7 +233,7 @@ func (cpb *ConfigurationPropertiesBinder) bindStruct(v reflect.Value, param Bind
 		if ft.Anonymous {
 			// 嵌入指针类型可能导致无限递归
 			if ft.Type.Kind() != reflect.Struct {
-				slog.Warn(fmt.Sprintf("bind path=%s type=%s anonymous field must be a struct", param.Path, v.Type().String()))
+				slog.Warn(fmt.Sprintf("bind path=%s type=%s anonymous field:[%s] must be a struct", param.Path, v.Type().String(), ft.Name))
 				continue
 			} // 递归调用 bindStruct 方法绑定匿名结构体
 			if err := cpb.bindStruct(fv, subParam); err != nil {
@@ -231,27 +242,26 @@ func (cpb *ConfigurationPropertiesBinder) bindStruct(v reflect.Value, param Bind
 			continue
 		}
 
-		// if tag, ok := ft.Tag.Lookup("value"); ok { // 获取value标签
-		// 	if err := subParam.BindTag(tag, ft.Tag); err != nil {
-		// 		return fmt.Errorf("bind path=%s type=%s error << %w", param.Path, v.Type().String(), err)
-		// 	}
-
-		// 	if err := cpb.BindValue(fv, subParam); err != nil {
-		// 		return err // no wrap
-		// 	}
-		// 	continue
-		// }
 		if tag, ok := ft.Tag.Lookup("value"); ok { // 获取value标签
 			if err := subParam.BindTag(tag, ft.Tag); err != nil {
 				return fmt.Errorf("bind path=%s type=%s error << %w", param.Path, v.Type().String(), err)
 			}
-		} else {
-			// 若没有配置value标签，则使用字段名称作为key
-			// ft.Name 转小写
-			fname := strings.ToLower(ft.Name)
-			subParam.Key = fmt.Sprintf("%s.%s", param.Key, fname)
-
 		}
+
+		// 若没有配置value标签 或 value标签设置的key为空，则使用字段名称作为key
+		if subParam.Key == param.Key {
+			// ft.Name 转小写
+			// fname := strings.ToLower(ft.Name)
+			fname := ft.Name
+			subParam.Key = fmt.Sprintf("%s.%s", param.Key, fname)
+		}
+		// {
+		// 	// 若没有配置value标签，则使用字段名称作为key
+		// 	// ft.Name 转小写
+		// 	// fname := strings.ToLower(ft.Name)
+		// 	fname := ft.Name
+		// 	subParam.Key = fmt.Sprintf("%s.%s", param.Key, fname)
+		// }
 
 		if err := cpb.BindValue(fv, subParam); err != nil {
 			return err // no wrap
@@ -488,10 +498,10 @@ func (param *BindParam) BindTag(tag string, stag reflect.StructTag) error {
 /*====ParsedTag====*/
 // ParsedTag 解析后的Tag信息
 type ParsedTag struct {
-	Key      string // 配置名
-	Def      string // 默认值
-	HasDef   bool   // 是否有默认值
-	Splitter string // 分割实现器名称
+	Key    string // 配置名
+	Def    string // 默认值
+	HasDef bool   // 是否有默认值
+	// Splitter string // 分割实现器名称
 }
 
 // ParseTag 解析标签字符串并返回解析后的结果
@@ -505,25 +515,25 @@ func ParseTag(tag string) (ret ParsedTag, err error) {
 	// 		return ParsedTag{}, fmt.Errorf("empty tag")
 	// 	}
 	// 不可>>开头
-	i := strings.LastIndex(tag, ">>")
-	if i == 0 {
-		err = fmt.Errorf("parse tag '%s' error: %w", tag, ErrInvalidSyntax)
-		return
-	}
-	j := strings.LastIndex(tag, "}")
+	// i := strings.LastIndex(tag, ">>")
+	// if i == 0 {
+	// 	err = fmt.Errorf("parse tag '%s' error: %w", tag, ErrInvalidSyntax)
+	// 	return
+	// }
+	j := strings.LastIndex(tag, BinderPlaceholderSuffix)
 	if j <= 0 {
 		err = fmt.Errorf("parse tag '%s' error: %w", tag, ErrInvalidSyntax)
 		return
 	}
-	k := strings.Index(tag, "${")
+	k := strings.Index(tag, BinderPlaceholderPrefix)
 	if k < 0 {
 		err = fmt.Errorf("parse tag '%s' error: %w", tag, ErrInvalidSyntax)
 		return
 	}
-	if i > j {
-		ret.Splitter = strings.TrimSpace(tag[i+2:])
-	}
-	ss := strings.SplitN(tag[k+2:j], ":=", 2)
+	// if i > j {
+	// 	ret.Splitter = strings.TrimSpace(tag[i+2:])
+	// }
+	ss := strings.SplitN(tag[k+2:j], BinderValueSeparator, 2)
 	ret.Key = ss[0]
 	if len(ss) > 1 {
 		ret.HasDef = true

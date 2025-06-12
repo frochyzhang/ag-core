@@ -4,42 +4,44 @@ import (
 	"ag-core/ag/ag_conf"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"testing"
 	"time"
 )
 
 type Hzw struct {
-	Name string `value:"${name:=111}"`
-	Age  int    `value:"${age:=22}"`
+	Name string `value:"${name:111}"`
+	Age  int    `value:"${age:22}"`
 }
 
 type Extra struct {
-	Bool    bool    `value:"${bool:=true}" expr:"$"`
-	Int     int     `value:"${int:=4}" expr:"$==4"`
-	Int8    int8    `value:"${int8:=8}" expr:"$==8"`
-	Int16   int16   `value:"${int16:=16}" expr:"$==16"`
-	Int32   int32   `value:"${int32:=32}" expr:"$==32"`
-	Int64   int64   `value:"${int32:=64}" expr:"$==64"`
-	Uint    uint    `value:"${uint:=4}" expr:"$==4"`
-	Uint8   uint8   `value:"${uint8:=8}" expr:"$==8"`
-	Uint16  uint16  `value:"${uint16:=16}" expr:"$==16"`
-	Uint32  uint32  `value:"${uint32:=32}" expr:"$==32"`
-	Uint64  uint64  `value:"${uint32:=64}" expr:"$==64"`
-	Float32 float32 `value:"${float32:=3.2}" expr:"abs($-3.2)<0.000001"`
-	Float64 float64 `value:"${float64:=6.4}" expr:"abs($-6.4)<0.000001"`
-	String  string  `value:"${string:=xyz}" expr:"$==\"xyz\""`
-	string2 string  `value:"${string2:=hhhh}"`
-	// Duration time.Duration  `value:"${duration:=10s}"`
-	IntsV0 []int          `value:"${intsV0:=}"`
-	IntsV1 []int          `value:"${intsV1:=1,2,3}"`
-	IntsV2 []int          `value:"${intsV2}"`
-	MapV0  map[string]int `value:"${mapV0:=}"`
-	MapV2  map[string]int `value:"${mapV2}"`
+	Bool     bool           `value:"${bool:true}" `
+	Int      int            `value:"${int:4}" `
+	Int8     int8           `value:"${int8:8}" `
+	Int16    int16          `value:"${int16:16}" `
+	Int32    int32          `value:"${int32:32}" `
+	Int64    int64          `value:"${int32:64}" `
+	Uint     uint           `value:"${uint:4}" `
+	Uint8    uint8          `value:"${uint8:8}" `
+	Uint16   uint16         `value:"${uint16:16}" `
+	Uint32   uint32         `value:"${uint32:32}" `
+	Uint64   uint64         `value:"${uint32:64}" `
+	Float32  float32        `value:"${float32:3.2}" `
+	Float64  float64        `value:"${float64:6.4}" `
+	String   string         `value:"${string:xyz}" `
+	string2  string         `value:"${string2:hhhh}"`
+	Duration time.Duration  `value:"${duration:10}"`
+	IntsV0   []int          `value:"${intsV0:}"`
+	IntsV1   []int          `value:"${intsV1:1,2,3}"`
+	IntsV2   []int          `value:"${intsV2}"`
+	MapV0    map[string]int `value:"${mapV0:}"`
+	MapV2    map[string]int `value:"${mapV2}"`
+	Hzw                     // Anonymous field 匿名字段
 }
 
 func TestConfBind(t *testing.T) {
-
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	// var int1 int
 	// Bind(Env, &int1, "int")
 
@@ -58,8 +60,8 @@ func TestConfBind(t *testing.T) {
 		"arr2[0].string": "11",
 		"arr2[1].string": "22",
 		"arr2[2].string": "33",
-		"mapV0.a":        "aa",
-		"mapV2.a":        "aa",
+		"mapV0.a":        "1",
+		"mapV2.a":        "2",
 	}
 	env := ag_conf.NewStandardEnvironment()
 	env.GetPropertySources().AddFirst(hzwps)
@@ -87,7 +89,10 @@ func TestConfBind(t *testing.T) {
 	fmt.Printf("err: %v Duration=%v\n", err, duration)
 
 	var ext Extra
-	binder.Bind(&ext)
+	err = binder.Bind(&ext)
+	if err != nil {
+		t.Errorf("err: %v\n", err)
+	}
 	extjson, _ := json.MarshalIndent(&ext, " ", " ")
 	fmt.Printf("ext=%s\n", extjson)
 
@@ -169,34 +174,34 @@ func TestParseTag(t *testing.T) {
 	}{
 		{
 			name: "normal with default",
-			tag:  "${key:=value}>>split",
+			tag:  "${key:value}",
 			want: ag_conf.ParsedTag{
-				Key:      "key",
-				Def:      "value",
-				HasDef:   true,
-				Splitter: "split",
+				Key:    "key",
+				Def:    "value",
+				HasDef: true,
+				// Splitter: "split",
 			},
 			wantErr: false,
 		},
 		{
 			name: "normal without default",
-			tag:  "${key}>>split",
+			tag:  "${key}",
 			want: ag_conf.ParsedTag{
-				Key:      "key",
-				Def:      "",
-				HasDef:   false,
-				Splitter: "split",
+				Key:    "key",
+				Def:    "",
+				HasDef: false,
+				// Splitter: "split",
 			},
 			wantErr: false,
 		},
 		{
 			name: "no splitter",
-			tag:  "${key:=value}",
+			tag:  "${key:value}",
 			want: ag_conf.ParsedTag{
-				Key:      "key",
-				Def:      "value",
-				HasDef:   true,
-				Splitter: "",
+				Key:    "key",
+				Def:    "value",
+				HasDef: true,
+				// Splitter: "",
 			},
 			wantErr: false,
 		},
