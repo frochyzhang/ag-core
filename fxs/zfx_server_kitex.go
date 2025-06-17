@@ -19,6 +19,8 @@ var FxKitexServerBaseModule = fx.Module(
 		FxBuilderKitexSuite,
 		// original kitex server
 		kitex.NewKitexServerWithSuit,
+
+		FxBuildAgKitexServerMiddleware,
 		// ag Server
 		kitex.NewServer,
 	),
@@ -28,6 +30,11 @@ var FxKitexServerBaseModule = fx.Module(
 			fx.As(new(ag_server.Server)), // 类型不匹配时，可以使用As指定接口类型
 			fx.ResultTags(`group:"ag_servers"`),
 		),
+		fx.Annotate(
+			kitex.RegistKitexServerMiddlewareOption,
+			// fx.As(new(*server.Option)),
+			fx.ResultTags(`group:"kitex_options"`),
+		),
 	),
 )
 
@@ -35,7 +42,7 @@ func kitexserverWrapper(s *kitex.Server) ag_server.Server {
 	return s
 }
 
-type FxKitexServerParams struct {
+type FxKitexServerInParams struct {
 	fx.In
 
 	Env    ag_conf.IConfigurableEnvironment
@@ -46,7 +53,7 @@ type FxKitexServerParams struct {
 	NamingClient naming_client.INamingClient `optional:"true"`
 }
 
-func FxBuilderKitexSuite(params FxKitexServerParams) (server.Suite, error) {
+func FxBuilderKitexSuite(params FxKitexServerInParams) (server.Suite, error) {
 	build := &kitex.KitexSuiteBuilder{
 		Env:          params.Env,
 		Binder:       params.Binder,
@@ -60,4 +67,17 @@ func FxBuilderKitexSuite(params FxKitexServerParams) (server.Suite, error) {
 	build.CustOptions = custOpt
 
 	return build.BuildSuite()
+}
+
+type FxAgKitexServerMiddlewareInParams struct {
+	fx.In
+
+	Middlewares []kitex.IAgKitexServerMiddleware `group:"ag_kitex_server_middlewares",optional:"true"`
+}
+
+func FxBuildAgKitexServerMiddleware(p FxAgKitexServerMiddlewareInParams) *kitex.AgKitexServerMiddleware {
+	akm := &kitex.AgKitexServerMiddleware{
+		Middlewares: p.Middlewares,
+	}
+	return akm
 }

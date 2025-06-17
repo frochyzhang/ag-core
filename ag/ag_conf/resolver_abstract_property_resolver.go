@@ -67,7 +67,7 @@ func (apr *AbstractPropertyResolver) SetPlaceholdPrefix(placeholderPrefic string
 
 // SetPlaceholdSuffix impl IConfigurablePeopertyResolver.SetPlaceholdSuffix
 func (apr *AbstractPropertyResolver) SetPlaceholdSuffix(placeholderSuffix string) {
-	apr.PlaceholderPrefix = placeholderSuffix
+	apr.PlaceholderSuffix = placeholderSuffix
 }
 
 // SetValueSeparator impl IConfigurablePeopertyResolver.SetValueSeparator

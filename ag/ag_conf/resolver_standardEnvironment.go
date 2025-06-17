@@ -22,10 +22,12 @@ func NewStandardEnvironment() *StandardEnvironment {
 	e.PropertySources = NewMutablePropertySources()
 	// 初始化PropertyResolver,传入PropertySources
 	e.PropertyResolver = NewPropertySourcesPropertyResolver(e.PropertySources)
+	// customizePropertySources 环境变量和-D属性添加到配置源中
 	e.customizePropertySources(e.PropertySources)
 	return e
 }
 
+// customizePropertySources 环境变量和-D属性添加到配置源中
 func (e *StandardEnvironment) customizePropertySources(ps *MutablePropertySources) {
 	ps.AddLast(NewPropertiesPropertySource(constSystemPropertiesPropertySourceName, e.GetSystemProperties()))
 	ps.AddLast(NewSystemEnvironmentPropertySource(constSystemEnvironmentPropertySourceName, e.GetSystemEnvironment()))

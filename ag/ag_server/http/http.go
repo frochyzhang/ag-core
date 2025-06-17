@@ -59,8 +59,9 @@ func NewHttpGinServer(
 		panic(err)
 	}
 	gin.SetMode(gin.DebugMode)
+	gins := gin.Default()
 	s := NewServer(
-		gin.Default(),
+		gins,
 		logger,
 		WithServerHost(host),
 		WithServerPort(port),

@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// IAbstractEnvironment 抽象环境接口 AbstractEnvironment无法实现customizePropertySources方法, 所以需要自定义接口描述
+// IAbstractEnvironment Dep 抽象环境接口 AbstractEnvironment无法实现customizePropertySources方法, 所以需要自定义接口描述
+// Deprecated: xxx
 type IAbstractEnvironment interface {
 	IConfigurableEnvironment
 	customizePropertySources(ps *MutablePropertySources)
@@ -54,12 +55,13 @@ func (e *AbstractEnvironment) ResolveRequiredPlaceholders(text string) (string, 
 // ---------------------------------------------------------------------
 // Implementation of IEnvironment interface
 // ---------------------------------------------------------------------
-
+/*
 // GetActiveProfiles impl IEnvironment.GetActiveProfiles
 func (e *AbstractEnvironment) GetDefaultProfiles() []string {
 	// TODO 暂无使用 暂时不实现
 	return nil
 }
+*/
 
 // ---------------------------------------------------------------------
 // Implementation of IConfigurablePeopertyResolver interface

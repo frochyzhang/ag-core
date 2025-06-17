@@ -4,10 +4,11 @@ import "testing"
 
 // 用于测试类型的接口实现情况
 var _IPropertyResolver IPropertyResolver
-var _IEnvironment IEnvironment
+var _IEnvironment IEnvironment // Deprecated: 精简移除IEnvironment
 var _IConfigurablePeopertyResolver IConfigurablePeopertyResolver
 var _IConfigurableEnvironment IConfigurableEnvironment
-var _IAbstractEnvironment IAbstractEnvironment
+
+var _IAbstractEnvironment IAbstractEnvironment // Deprecated: 精简移除IAbstractEnvironment
 
 var _AbstractEnvironment *AbstractEnvironment
 var _StandardEnvironment *StandardEnvironment
@@ -19,7 +20,7 @@ func TestResoverApiCheck(t *testing.T) {
 		// --- 直接组合关系(类似继承) ---
 		_IPropertyResolver = _IEnvironment
 		_IPropertyResolver = _IConfigurablePeopertyResolver
-		_IEnvironment = _IConfigurableEnvironment
+		// _IEnvironment = _IConfigurableEnvironment
 		_IConfigurablePeopertyResolver = _IConfigurableEnvironment
 		_IConfigurableEnvironment = _IAbstractEnvironment
 
@@ -27,7 +28,7 @@ func TestResoverApiCheck(t *testing.T) {
 		_IPropertyResolver = _IConfigurableEnvironment
 		_IPropertyResolver = _IAbstractEnvironment
 		_IConfigurablePeopertyResolver = _IAbstractEnvironment
-		_IEnvironment = _IAbstractEnvironment
+		// _IEnvironment = _IAbstractEnvironment
 	}
 }
 
@@ -67,7 +68,7 @@ var _IPropertySource IPropertySource
 var _MapPropertySource *MapPropertySource
 var _PropertiesPropertySource *PropertiesPropertySource
 var _SystemEnvironmentPropertySource *SystemEnvironmentPropertySource
-var _NacosPropertySource *NacosPropertySource // TODO 要移出
+
 
 func TestSourcesCheck(t *testing.T) {
 	if false {
@@ -79,7 +80,6 @@ func TestSourcesCheck(t *testing.T) {
 		// IPropertySource 的实现
 		_IPropertySource = _MapPropertySource
 		_IPropertySource = _PropertiesPropertySource
-		_IPropertySource = _NacosPropertySource
 		_IPropertySource = _SystemEnvironmentPropertySource
 
 		// PropertiesPropertySource 继承 MapPropertySource

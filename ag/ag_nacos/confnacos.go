@@ -261,6 +261,15 @@ func NewNacosRemoteConfig(env ag_conf.IConfigurableEnvironment, iClient config_c
 			if err != nil {
 				return fmt.Errorf("dataId:%s Group:%s parse error: %w", dataidinfo.DataID, dataidinfo.Group, err)
 			}
+
+			if context == "" {
+				continue
+			}
+			err = addOrRefresh(env, context, &dataidinfo, false)
+			if err != nil {
+				return err
+			}
+
 			// 只要获取nacos的内容不返回error，就可以添加对应的监听
 			iClient.ListenConfig(vo.ConfigParam{
 				DataId: dataidinfo.DataID,
@@ -274,14 +283,7 @@ func NewNacosRemoteConfig(env ag_conf.IConfigurableEnvironment, iClient config_c
 					}
 				},
 			})
-
-			if context == "" {
-				continue
-			}
-			err = addOrRefresh(env, context, &dataidinfo, false)
-			if err != nil {
-				return err
-			}
+			// TODO 怎么取消配置监听
 		}
 	}
 	return nil
@@ -297,11 +299,11 @@ func addOrRefresh(env ag_conf.IConfigurableEnvironment, context string, dataidin
 		return err
 	}
 	if refresh {
-		env.GetPropertySources().Replace(keyname, ag_conf.NewNacosPropertySource(keyname, res))
+		env.GetPropertySources().Replace(keyname, NewNacosPropertySource(keyname, res))
 		return nil
 	}
 	// 对于扩展的配置就是要在原来配置的后面添加
-	env.GetPropertySources().AddLast(ag_conf.NewNacosPropertySource(keyname, res))
+	env.GetPropertySources().AddLast(NewNacosPropertySource(keyname, res))
 
 	return nil
 }

@@ -18,12 +18,13 @@ type IPropertyResolver interface {
 }
 
 // IEnvironment 环境接口
+// Deprecated: xxx
 type IEnvironment interface {
 	IPropertyResolver
 	// 类似spring的active功能，TODO 暂未实现
-	// GetActiveProfiles() []string
+	GetActiveProfiles() []string
 	GetDefaultProfiles() []string // TODO 暂无使用 暂时不实现
-	// AcceptsProfiles(profiles ...string) bool
+	AcceptsProfiles(profiles ...string) bool
 }
 
 // IConfigurablePeopertyResolver 可配置的属性解析器接口
@@ -40,8 +41,9 @@ type IConfigurablePeopertyResolver interface {
 
 // IConfigurableEnvironment 可配置的环境属性接口
 type IConfigurableEnvironment interface {
-	// 继承Enviroment
-	IEnvironment
+	// 继承Enviroment (Deprecated)
+	// IEnvironment
+
 	// 继承ConfigurablePeopertyResolver
 	IConfigurablePeopertyResolver
 

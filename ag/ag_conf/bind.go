@@ -27,14 +27,15 @@ var (
 var Binder IBinder
 
 type IBinder interface {
+	GetEnv() IConfigurableEnvironment
 	Bind(i any, name ...string) error
 	BindValue(v reflect.Value, param BindParam) error
 }
 
 // ConfigurationPropertiesBinder 配置属性绑定器
 type ConfigurationPropertiesBinder struct {
-	env             IConfigurableEnvironment
-	propertySources IPropertySources
+	env IConfigurableEnvironment
+	// propertySources IPropertySources
 }
 
 // NewConfigurationPropertiesBinder 创建一个配置属性绑定器
@@ -42,10 +43,15 @@ func NewConfigurationPropertiesBinder(env IConfigurableEnvironment) *Configurati
 	cpb := &ConfigurationPropertiesBinder{}
 
 	cpb.env = env
-	cpb.propertySources = env.GetPropertySources()
+	// cpb.propertySources = env.GetPropertySources()
 
 	Binder = cpb
 	return cpb
+}
+
+// GetEnv 获取配置环境
+func (cpb *ConfigurationPropertiesBinder) GetEnv() IConfigurableEnvironment {
+	return cpb.env
 }
 
 // Bind 从指定env中绑定配置到指定的结构体
@@ -384,7 +390,8 @@ func (cpb *ConfigurationPropertiesBinder) containsDescendantOfName(name string) 
 	found := false
 	prefix := name + "."
 
-	cpb.propertySources.RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
+	// cpb.propertySources.RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
+	cpb.env.GetPropertySources().RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
 		// 检查属性源内容是否包含后代
 		source := ps.GetSource()
 		for k := range source {
@@ -402,7 +409,8 @@ func (cpb *ConfigurationPropertiesBinder) containsDescendantOfName(name string) 
 func (cpb *ConfigurationPropertiesBinder) getDescendantKeysOfName(name string) []string {
 	dkeys := []string{}
 	prefix := name + "."
-	cpb.propertySources.RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
+	// cpb.propertySources.RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
+	cpb.env.GetPropertySources().RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
 		// 检查属性源内容是否包含后代
 		source := ps.GetSource()
 		for k := range source {
