@@ -3,7 +3,7 @@ package kitex_test
 import (
 	"ag-core/ag/ag_conf"
 	"ag-core/ag/ag_ext"
-	"ag-core/ag/ag_server/kitex"
+	kitex "ag-core/ag/ag_kitex/server"
 	"encoding/json"
 	"fmt"
 	"log/slog"

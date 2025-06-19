@@ -1,4 +1,4 @@
-package kitex
+package server
 
 import (
 	"context"
@@ -22,8 +22,8 @@ type AgKitexServerMiddleware struct {
 	Middlewares []IAgKitexServerMiddleware
 }
 
-// RegistKitexServerMiddlewareOption 创建一个带有有序中间件链的 Kitex server.Option.
-func RegistKitexServerMiddlewareOption(mids *AgKitexServerMiddleware) *server.Option {
+// AgRegistKitexServerMiddlewareOption 创建一个带有有序中间件链的 Kitex server.Option.
+func AgRegistKitexServerMiddlewareOption(mids *AgKitexServerMiddleware) *server.Option {
 	var middlewares []IAgKitexServerMiddleware
 	if mids == nil || len(mids.Middlewares) == 0 {
 		middlewares = make([]IAgKitexServerMiddleware, 0)

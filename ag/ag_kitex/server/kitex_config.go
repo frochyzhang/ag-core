@@ -1,4 +1,4 @@
-package kitex
+package server
 
 const (
 	KitexServerPropertiesPrefix = "kitex.server"

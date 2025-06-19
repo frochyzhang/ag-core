@@ -1,4 +1,4 @@
-package kitex
+package server
 
 import (
 	"ag-core/ag/ag_conf"
@@ -138,11 +138,11 @@ func NewKitexServerWithSuit(
 	return svr
 }
 
-type KitexOpSuite struct {
+type KitexServerSuite struct {
 	Opts []server.Option
 }
 
-func (s *KitexOpSuite) Options() []server.Option {
+func (s *KitexServerSuite) Options() []server.Option {
 	return s.Opts
 }
 
@@ -155,8 +155,9 @@ type KitexSuiteBuilder struct {
 	NamingClient naming_client.INamingClient
 }
 
+// BuildSuite KitexServer的配置构建器，最终提供一个server.Suite 供NewKitexServerWithSuit创建kitex服务使用
 func (builder *KitexSuiteBuilder) BuildSuite() (server.Suite, error) {
-	suite := &KitexOpSuite{
+	suite := &KitexServerSuite{
 		Opts: make([]server.Option, 0),
 	}
 
