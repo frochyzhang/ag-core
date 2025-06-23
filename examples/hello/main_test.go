@@ -5,9 +5,8 @@ import (
 	"ag-core/fxs"
 	"embed"
 	"fmt"
-	"testing"
-
 	"go.uber.org/fx"
+	"testing"
 )
 
 //go:embed app*
@@ -17,7 +16,7 @@ var localConfigFile embed.FS
 // 	FX_RUN(localConfigFile)
 // }
 
-func TestMain(t *testing.T) {
+func TestMain(m *testing.M) {
 	FX_RUN(localConfigFile)
 }
 
@@ -58,10 +57,11 @@ var mainFx = fx.Module("main",
 
 	/** BaseServer **/
 	// Hello服务
-	fxs.FxHelloServerMode,
+	//fxs.FxHelloServerMode,
 	// HttpServerBase
 	// fxs.FxHttpServerBaseModule,
 	// KitexServerBase
 	// fxs.FxKitexServerBaseModule,
-
+	//fxs.FxMnOptionsModule,
+	fxs.FxMiniNettyServerBaseModule,
 )

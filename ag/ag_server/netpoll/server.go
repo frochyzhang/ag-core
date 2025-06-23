@@ -1,9 +1,13 @@
-package main
+package nettypoll
 
 import (
+	"ag-core/ag/ag_conf"
+	"ag-core/ag/ag_ext/ip"
 	mininetty "ag-core/ag/ag_netpoll"
+	"context"
 	"fmt"
 	"log/slog"
+	"time"
 )
 
 type Server struct {
@@ -53,42 +57,97 @@ func NewServer(logger *slog.Logger, opts ...Option) *Server {
 	return s
 }
 
-func NewNettyServer() *Server {
-	//host := conf.GetProperty("hertz.server.host")
-	//port, err := cast.ToIntE(conf.GetProperty("hertz.server.port"))
-	//if err != nil {
-	//	panic(err)
-	//}
-
-	//addr := fmt.Sprintf("%s:%d", host, port)
-
-	return NewServer(
-		&slog.Logger{},
-		WithAddr(":8080"),
-		AppendHandler(mininetty.NewLoggingHandler("server")),
-		AppendHandler(&mininetty.EchoHandler{}),
-	)
+func NewNettyServerWithSuite(
+	suite *MiniNettyOptionSuite,
+	logger *slog.Logger,
+) *Server {
+	return NewServer(logger, suite.Options()...)
 }
 
-func main() {
-	// 定义通道初始化函数
-	//initFunc := func(ch *mininetty.Channel) {
-	//	pipeline := ch.Pipeline
-	//	pipeline.AddLast("logger", mininetty.NewLoggingHandler("server"))
-	//	//pipeline.AddLast("decoder", &mininetty.ByteToMessageDecoder{})
-	//	pipeline.AddLast("echo", &mininetty.EchoHandler{})
-	//}
+type MiniNettyOptionSuite struct {
+	Opts []Option
+}
 
-	server := NewNettyServer()
+func (s *MiniNettyOptionSuite) Options() []Option { return s.Opts }
 
-	// 创建服务器
-	//server, err := mininetty.NewServer(":8080", initFunc)
-	//if err != nil {
-	//	panic(err)
-	//}
-	defer server.Server.Shutdown()
-	//defer server.Shutdown()
+type MiniNettySuiteBuilder struct {
+	Binder        ag_conf.IBinder
+	CustomOptions []Option
+}
 
-	// 启动服务器
-	server.Server.Start()
+func (builder *MiniNettySuiteBuilder) BuildSuite() (*MiniNettyOptionSuite, error) {
+	suite := &MiniNettyOptionSuite{
+		Opts: make([]Option, 0),
+	}
+
+	suite.Opts = append(suite.Opts, builder.CustomOptions...)
+
+	var conf MiniNettyServerProperties
+	err := builder.Binder.Bind(&conf, miniNettyServerPropertiesPrefix)
+
+	if err != nil {
+		slog.Error("mininetty server config error", "error", err)
+		return nil, err
+	}
+
+	host, port, err := findHostPort(conf)
+	if err != nil {
+		panic(err)
+	}
+
+	addr := fmt.Sprintf("%s:%d", host, port)
+
+	slog.Info("mininetty", "host", addr)
+	suite.Opts = append(suite.Opts, WithAddr(addr))
+
+	return suite, nil
+}
+
+func (s *Server) Start(ctx context.Context) error {
+	s.logger.Info("mininetty server start")
+	s.Server.Start()
+	return nil
+}
+
+func (s *Server) Stop(ctx context.Context) error {
+	s.logger.Info("mininetty server shutdown")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	s.Server.Shutdown()
+
+	s.logger.Info("Shutting down mininetty server...")
+	return nil
+}
+
+func findHostPort(conf MiniNettyServerProperties) (host string, port int, rerr error) {
+	// 服务ip、端口配置
+	host = conf.Host
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
+	if !ip.IsHostAvailable(host) {
+		return "", 0, fmt.Errorf("mininetty host unavailable: %s", host)
+	}
+
+	port = conf.Port
+	if conf.AdaptivePort {
+		slog.Info("mininetty server enable adaptive port")
+		if port == 0 {
+			port = DefaultHertzOriginPort
+		}
+		port, rerr = ip.GetAvailablePort(host, port)
+		if rerr != nil {
+			return
+		}
+	} else {
+		if port == 0 {
+			return host, port, fmt.Errorf("mininetty port invalid:%v", port)
+		}
+	}
+
+	slog.Info(fmt.Sprintf("found mininetty host:%s, port:%d", host, port))
+	return
 }
