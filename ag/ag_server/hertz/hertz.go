@@ -188,6 +188,7 @@ func (builder *HertzSuiteBuilder) BuildSuite() (*HertzOptionSuite, error) {
 			tags = hconf.Tags
 		}
 		tags["ag_core"] = "All rights reserved"
+		tags["lang_type"] = "Golang"
 		regInfo.Tags = tags
 
 		suite.Opts = append(
