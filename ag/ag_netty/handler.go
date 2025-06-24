@@ -1,4 +1,4 @@
-package ag_netpoll
+package ag_netty
 
 // ChannelHandler 通道处理器接口
 type ChannelHandler interface {

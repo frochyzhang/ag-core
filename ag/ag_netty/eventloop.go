@@ -1,4 +1,4 @@
-package ag_netpoll
+package ag_netty
 
 import (
 	"context"
@@ -108,6 +108,15 @@ func (el *EventLoop) runTaskLoop() {
 		case <-el.quit:
 			return
 		}
+	}
+}
+
+func (el *EventLoop) IsShutdown() bool {
+	select {
+	case <-el.quit:
+		return true
+	default:
+		return false
 	}
 }
 

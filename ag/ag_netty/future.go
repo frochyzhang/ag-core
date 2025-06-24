@@ -1,4 +1,4 @@
-package ag_netpoll
+package ag_netty
 
 import (
 	"errors"

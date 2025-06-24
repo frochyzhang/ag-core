@@ -1,4 +1,4 @@
-package ag_netpoll
+package ag_netty
 
 import (
 	"github.com/cloudwego/netpoll"
@@ -10,17 +10,17 @@ import (
 // Channel 网络通道
 type Channel struct {
 	conn      netpoll.Connection
-	loop      *EventLoop
+	looper    EventLooper // 使用接口类型
 	Pipeline  *Pipeline
 	active    bool
 	closeOnce sync.Once
 }
 
 // NewChannel 创建新通道
-func NewChannel(conn netpoll.Connection, loop *EventLoop) *Channel {
+func NewChannel(conn netpoll.Connection, looper EventLooper) *Channel {
 	ch := &Channel{
 		conn:   conn,
-		loop:   loop,
+		looper: looper,
 		active: true,
 	}
 	ch.Pipeline = NewPipeline(ch)
@@ -29,7 +29,7 @@ func NewChannel(conn netpoll.Connection, loop *EventLoop) *Channel {
 
 // Write 写数据
 func (c *Channel) Write(data []byte) {
-	c.loop.Post(func() {
+	c.looper.Post(func() {
 		if c.active {
 			c.Pipeline.FireWrite(data)
 		}
@@ -48,7 +48,7 @@ func (c *Channel) WriteDirect(data []byte) error {
 // WriteAsync 异步写数据
 func (c *Channel) WriteAsync(data []byte) *Future {
 	future := NewFuture()
-	c.loop.Post(func() {
+	c.looper.Post(func() {
 		if c.active {
 			_, err := c.conn.Write(data)
 			future.Complete(err)
@@ -62,7 +62,7 @@ func (c *Channel) WriteAsync(data []byte) *Future {
 // Close 关闭通道
 func (c *Channel) Close() {
 	c.closeOnce.Do(func() {
-		c.loop.Post(func() {
+		c.looper.Post(func() {
 			if c.active {
 				c.active = false
 				c.conn.Close()

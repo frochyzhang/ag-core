@@ -1,9 +1,9 @@
-package nettypoll
+package server
 
 import (
 	"ag-core/ag/ag_conf"
 	"ag-core/ag/ag_ext/ip"
-	mininetty "ag-core/ag/ag_netpoll"
+	"ag-core/ag/ag_netty"
 	"context"
 	"fmt"
 	"log/slog"
@@ -11,9 +11,9 @@ import (
 )
 
 type Server struct {
-	*mininetty.Server
+	*ag_netty.Server
 	addr     string
-	handlers []mininetty.ChannelHandler
+	handlers []ag_netty.ChannelHandler
 	logger   *slog.Logger
 }
 
@@ -28,7 +28,7 @@ func WithAddr(addr string) Option {
 		},
 	}
 }
-func AppendHandler(ch mininetty.ChannelHandler) Option {
+func AppendHandler(ch ag_netty.ChannelHandler) Option {
 	return Option{
 		opt: func(s *Server) {
 			s.handlers = append(s.handlers, ch)
@@ -38,7 +38,7 @@ func AppendHandler(ch mininetty.ChannelHandler) Option {
 
 func NewServer(logger *slog.Logger, opts ...Option) *Server {
 	s := &Server{
-		handlers: make([]mininetty.ChannelHandler, 0),
+		handlers: make([]ag_netty.ChannelHandler, 0),
 		logger:   logger,
 	}
 
@@ -46,7 +46,7 @@ func NewServer(logger *slog.Logger, opts ...Option) *Server {
 		opt.opt(s)
 	}
 
-	initFunc := func(ch *mininetty.Channel) {
+	initFunc := func(ch *ag_netty.Channel) {
 		pipeline := ch.Pipeline
 		if pipeline != nil {
 			for i, handler := range s.handlers {
@@ -55,7 +55,7 @@ func NewServer(logger *slog.Logger, opts ...Option) *Server {
 		}
 	}
 
-	server, err := mininetty.NewServer(s.addr, initFunc)
+	server, err := ag_netty.NewServer(s.addr, initFunc)
 	if err != nil {
 		panic(err)
 	}
@@ -64,35 +64,35 @@ func NewServer(logger *slog.Logger, opts ...Option) *Server {
 }
 
 func NewNettyServerWithSuite(
-	suite *MiniNettyOptionSuite,
+	suite *NettyOptionSuite,
 	logger *slog.Logger,
 ) *Server {
 	return NewServer(logger, suite.Options()...)
 }
 
-type MiniNettyOptionSuite struct {
+type NettyOptionSuite struct {
 	Opts []Option
 }
 
-func (s *MiniNettyOptionSuite) Options() []Option { return s.Opts }
+func (s *NettyOptionSuite) Options() []Option { return s.Opts }
 
-type MiniNettySuiteBuilder struct {
+type NettySuiteBuilder struct {
 	Binder        ag_conf.IBinder
 	CustomOptions []Option
 }
 
-func (builder *MiniNettySuiteBuilder) BuildSuite() (*MiniNettyOptionSuite, error) {
-	suite := &MiniNettyOptionSuite{
+func (builder *NettySuiteBuilder) BuildSuite() (*NettyOptionSuite, error) {
+	suite := &NettyOptionSuite{
 		Opts: make([]Option, 0),
 	}
 
 	suite.Opts = append(suite.Opts, builder.CustomOptions...)
 
-	var conf MiniNettyServerProperties
-	err := builder.Binder.Bind(&conf, miniNettyServerPropertiesPrefix)
+	var conf NettyServerProperties
+	err := builder.Binder.Bind(&conf, nettyServerPropertiesPrefix)
 
 	if err != nil {
-		slog.Error("mininetty server config error", "error", err)
+		slog.Error("ag_netty server config error", "error", err)
 		return nil, err
 	}
 
@@ -103,31 +103,31 @@ func (builder *MiniNettySuiteBuilder) BuildSuite() (*MiniNettyOptionSuite, error
 
 	addr := fmt.Sprintf("%s:%d", host, port)
 
-	slog.Info("mininetty", "host", addr)
+	slog.Info("ag_netty", "host", addr)
 	suite.Opts = append(suite.Opts, WithAddr(addr))
 
 	return suite, nil
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	s.logger.Info("mininetty server start")
+	s.logger.Info("ag_netty server start")
 	s.Server.Start()
 	return nil
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	s.logger.Info("mininetty server shutdown")
+	s.logger.Info("ag_netty server shutdown")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	s.Server.Shutdown()
 
-	s.logger.Info("Shutting down mininetty server...")
+	s.logger.Info("Shutting down ag_netty server...")
 	return nil
 }
 
-func findHostPort(conf MiniNettyServerProperties) (host string, port int, rerr error) {
+func findHostPort(conf NettyServerProperties) (host string, port int, rerr error) {
 	// 服务ip、端口配置
 	host = conf.Host
 	if host == "" {
@@ -135,14 +135,14 @@ func findHostPort(conf MiniNettyServerProperties) (host string, port int, rerr e
 	}
 
 	if !ip.IsHostAvailable(host) {
-		return "", 0, fmt.Errorf("mininetty host unavailable: %s", host)
+		return "", 0, fmt.Errorf("ag_netty host unavailable: %s", host)
 	}
 
 	port = conf.Port
 	if conf.AdaptivePort {
-		slog.Info("mininetty server enable adaptive port")
+		slog.Info("ag_netty server enable adaptive port")
 		if port == 0 {
-			port = DefaultHertzOriginPort
+			port = DefaultNettyOriginPort
 		}
 		port, rerr = ip.GetAvailablePort(host, port)
 		if rerr != nil {
@@ -150,10 +150,10 @@ func findHostPort(conf MiniNettyServerProperties) (host string, port int, rerr e
 		}
 	} else {
 		if port == 0 {
-			return host, port, fmt.Errorf("mininetty port invalid:%v", port)
+			return host, port, fmt.Errorf("ag_netty port invalid:%v", port)
 		}
 	}
 
-	slog.Info(fmt.Sprintf("found mininetty host:%s, port:%d", host, port))
+	slog.Info(fmt.Sprintf("found ag_netty host:%s, port:%d", host, port))
 	return
 }

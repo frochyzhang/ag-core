@@ -1,11 +1,11 @@
-package nettypoll
+package server
 
 const (
-	miniNettyServerPropertiesPrefix = "mininetty.server"
-	DefaultHertzOriginPort          = 8080
+	nettyServerPropertiesPrefix = "netty.server"
+	DefaultNettyOriginPort      = 8080
 )
 
-type MiniNettyServerProperties struct {
+type NettyServerProperties struct {
 	Host          string `value:"${host:0.0.0.0}"`
 	Port          int    `value:"${port:0}"`
 	AdaptivePort  bool   `value:"${adaptive-port:false}"`

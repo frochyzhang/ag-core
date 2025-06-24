@@ -38,6 +38,8 @@ var mainFx = fx.Module("main",
 	fxs.FxConfLocMode,
 	// nacosconf
 	fxs.FxConfNacoMode,
+	// nettyClient
+	fxs.FxNettyClientBaseModule,
 
 	/** DB **/
 	// fxs.FxAicGromdbModule,
@@ -48,10 +50,10 @@ var mainFx = fx.Module("main",
 
 	/** BaseServer **/
 	// Hello服务
-	//fxs.FxHelloServerMode,
+	fxs.FxHelloServerMode,
 	// HttpServerBase
-	fxs.FxHertzWithRegistryServerBaseModule,
+	//fxs.FxHertzWithRegistryServerBaseModule,
 	// KitexServerBase
 	//fxs.FxKitexServerBaseModule,
-	fxs.FxMiniNettyServerBaseModule,
+	//fxs.FxNettyServerBaseModule,
 )
