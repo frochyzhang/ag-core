@@ -12,13 +12,23 @@ import (
 var FxMiniNettyServerBaseModule = fx.Module("fx_mini_netty_server_base",
 
 	fx.Provide(
-		FxMnOptions,
-
 		FxNewMiniNettyServerSuite,
 		fx.Annotate(
 			np.NewNettyServerWithSuite,
 			fx.As(new(ag_server.Server)),
 			fx.ResultTags(`group:"ag_servers"`),
+		),
+	),
+	fx.Provide(
+		fx.Annotate(
+			FxMnEchoOption,
+			fx.ResultTags(`group:"ag_mn_custom_options"`),
+		),
+	),
+	fx.Provide(
+		fx.Annotate(
+			FxMnLoggerOption,
+			fx.ResultTags(`group:"ag_mn_custom_options"`),
 		),
 	),
 )
@@ -27,7 +37,7 @@ type FxMiniNettyServerInParam struct {
 	fx.In
 
 	Binder      ag_conf.IBinder
-	CustOptions []np.Option
+	CustOptions []np.Option `group:"ag_mn_custom_options" ,optional:"true"`
 }
 
 func FxNewMiniNettyServerSuite(params FxMiniNettyServerInParam) (*np.MiniNettyOptionSuite, error) {
@@ -39,10 +49,10 @@ func FxNewMiniNettyServerSuite(params FxMiniNettyServerInParam) (*np.MiniNettyOp
 	return builder.BuildSuite()
 }
 
-func FxMnOptions() []np.Option {
-	custOpts := make([]np.Option, 0)
-	custOpts = append(custOpts, np.AppendHandler(ag_netpoll.NewLoggingHandler("fx_logger")))
-	custOpts = append(custOpts, np.AppendHandler(&ag_netpoll.EchoHandler{}))
+func FxMnLoggerOption() np.Option {
+	return np.AppendHandler(ag_netpoll.NewLoggingHandler("fx_logger"))
+}
 
-	return custOpts
+func FxMnEchoOption() np.Option {
+	return np.AppendHandler(&ag_netpoll.EchoHandler{})
 }

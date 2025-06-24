@@ -53,5 +53,5 @@ var mainFx = fx.Module("main",
 	fxs.FxHertzWithRegistryServerBaseModule,
 	// KitexServerBase
 	//fxs.FxKitexServerBaseModule,
-	//fxs.FxNetpollServerBaseModule,
+	fxs.FxMiniNettyServerBaseModule,
 )

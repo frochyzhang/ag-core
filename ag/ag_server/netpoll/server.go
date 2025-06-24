@@ -17,16 +17,22 @@ type Server struct {
 	logger   *slog.Logger
 }
 
-type Option func(*Server)
+type Option struct {
+	opt func(*Server)
+}
 
 func WithAddr(addr string) Option {
-	return func(s *Server) {
-		s.addr = addr
+	return Option{
+		opt: func(s *Server) {
+			s.addr = addr
+		},
 	}
 }
 func AppendHandler(ch mininetty.ChannelHandler) Option {
-	return func(s *Server) {
-		s.handlers = append(s.handlers, ch)
+	return Option{
+		opt: func(s *Server) {
+			s.handlers = append(s.handlers, ch)
+		},
 	}
 }
 
@@ -37,7 +43,7 @@ func NewServer(logger *slog.Logger, opts ...Option) *Server {
 	}
 
 	for _, opt := range opts {
-		opt(s)
+		opt.opt(s)
 	}
 
 	initFunc := func(ch *mininetty.Channel) {
