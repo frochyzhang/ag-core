@@ -35,8 +35,15 @@ func Dial(
 		channel.Pipeline.FireActive()
 	})
 
+	// 设置读超时
+	conn.SetReadTimeout(readTimeout)
+	// 设置写超时
+	conn.SetWriteTimeout(writeTimeout)
+	// 设置空闲超时
+	conn.SetIdleTimeout(idleTimeout)
+
 	// 启动读循环
-	go readLoop(conn, channel, looper, readTimeout, writeTimeout, idleTimeout)
+	go readLoop(conn, channel, looper)
 
 	slog.Info("Connected to server", "addr", addr)
 	return channel, nil
@@ -47,25 +54,12 @@ func readLoop(
 	conn netpoll.Connection,
 	channel *Channel,
 	looper EventLooper,
-	readTimeout time.Duration,
-	writeTimeout time.Duration,
-	idleTimeout time.Duration,
 ) {
 	reader := conn.Reader()
-	loopCnt := 0
 	for {
-		loopCnt++
-		println("loopCnt", loopCnt)
 		if looper.IsShutdown() {
 			return
 		}
-
-		// 设置读超时
-		conn.SetReadTimeout(readTimeout)
-		// 设置写超时
-		conn.SetWriteTimeout(writeTimeout)
-		// 设置空闲超时
-		conn.SetIdleTimeout(idleTimeout)
 
 		// 检查可读数据
 		n := reader.Len()

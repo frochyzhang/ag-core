@@ -67,8 +67,9 @@ func (ctx *HandlerContext) FireWrite(data []byte) {
 
 // FireError 触发错误事件
 func (ctx *HandlerContext) FireError(err error) {
-	if ctx.next != nil {
-		ctx.next.handler.HandleError(ctx.next, err)
+	if ctx.handler != nil {
+		ctx.handler.HandleError(ctx, err)
+		ctx.prev.FireError(err)
 	}
 }
 

@@ -87,6 +87,6 @@ func (c *Client) Send(data []byte) {
 func (c *Client) SendAndGet(data []byte) (any, error) {
 	future := c.Channel().WriteAsync(data)
 	defer c.Close()
-	ret, err := future.GetWithTimeout(ToTimeoutDuration(100000))
+	ret, err := future.GetWithTimeout(c.readTimeout)
 	return ret, err
 }
