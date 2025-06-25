@@ -6,12 +6,15 @@ import (
 	"embed"
 	"fmt"
 	"go.uber.org/fx"
+	"runtime/pprof"
 )
 
 //go:embed app*
 var localConfigFile embed.FS
 
 func main() {
+	threadProfile := pprof.Lookup("threadcreate")
+	fmt.Printf(" beforeClient threads counts: %d\n", threadProfile.Count())
 	var fxopts []fx.Option
 
 	fxopts = append(
@@ -28,6 +31,7 @@ func main() {
 	fxapp.Run()
 
 	fmt.Println("========shutdown======")
+	fmt.Printf(" afterClient threads counts: %d\n", threadProfile.Count())
 }
 
 var mainFx = fx.Module("main",

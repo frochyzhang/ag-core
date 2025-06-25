@@ -7,8 +7,15 @@ import (
 )
 
 // Dial 连接到服务器
-func Dial(addr string, looper EventLooper) (*Channel, error) {
-	conn, err := netpoll.DialConnection("tcp", addr, 50*time.Millisecond)
+func Dial(
+	addr string,
+	connTimeout time.Duration,
+	readTimeout time.Duration,
+	writeTimeout time.Duration,
+	idleTimeout time.Duration,
+	looper EventLooper,
+) (*Channel, error) {
+	conn, err := netpoll.DialConnection("tcp", addr, connTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -29,28 +36,42 @@ func Dial(addr string, looper EventLooper) (*Channel, error) {
 	})
 
 	// 启动读循环
-	go readLoop(conn, channel, looper)
+	go readLoop(conn, channel, looper, readTimeout, writeTimeout, idleTimeout)
 
 	slog.Info("Connected to server", "addr", addr)
 	return channel, nil
 }
 
 // readLoop 读取数据循环
-func readLoop(conn netpoll.Connection, channel *Channel, looper EventLooper) {
+func readLoop(
+	conn netpoll.Connection,
+	channel *Channel,
+	looper EventLooper,
+	readTimeout time.Duration,
+	writeTimeout time.Duration,
+	idleTimeout time.Duration,
+) {
 	reader := conn.Reader()
+	loopCnt := 0
 	for {
+		loopCnt++
+		println("loopCnt", loopCnt)
 		if looper.IsShutdown() {
 			return
 		}
 
 		// 设置读超时
-		conn.SetReadTimeout(3 * time.Second)
+		conn.SetReadTimeout(readTimeout)
+		// 设置写超时
+		conn.SetWriteTimeout(writeTimeout)
+		// 设置空闲超时
+		conn.SetIdleTimeout(idleTimeout)
 
 		// 检查可读数据
 		n := reader.Len()
 
 		if n == 0 {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 			continue
 		}
 

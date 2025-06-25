@@ -45,10 +45,18 @@ func (s *Server) Start(ctx context.Context) error {
 		// 读取body内容
 		buf := make([]byte, 2048)
 		n, _ := body.Read(buf)
+
 		clientWithSuite := client.NewNettyClientWithSuite(s.suite, s.logger)
-		clientWithSuite.Connect()
-		clientWithSuite.Send(buf[:n])
-		//defer clientWithSuite.Close()
+		err2 := clientWithSuite.Connect()
+		if err2 != nil {
+			panic(err2)
+		}
+		_, err2 = clientWithSuite.SendAndGet(buf[:n])
+		if err2 != nil {
+			println("err2", err2.(error).Error())
+			panic(err2)
+		}
+
 		bbuf := buf[:n]
 		var bmap map[string]any
 		err := json.Unmarshal(bbuf, &bmap)

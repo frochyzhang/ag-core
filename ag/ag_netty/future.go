@@ -43,7 +43,7 @@ func (f *Future) GetWithTimeout(timeout time.Duration) (interface{}, error) {
 	case <-f.done:
 		return f.result, nil
 	case <-time.After(timeout):
-		return nil, errors.New("future timeout")
+		return nil, errors.New("read timeout")
 	}
 }
 

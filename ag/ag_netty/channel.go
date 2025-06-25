@@ -14,6 +14,7 @@ type Channel struct {
 	Pipeline  *Pipeline
 	active    bool
 	closeOnce sync.Once
+	future    *Future
 }
 
 // NewChannel 创建新通道
@@ -25,6 +26,10 @@ func NewChannel(conn netpoll.Connection, looper EventLooper) *Channel {
 	}
 	ch.Pipeline = NewPipeline(ch)
 	return ch
+}
+
+func (c *Channel) Future() *Future {
+	return c.future
 }
 
 // Write 写数据
@@ -50,25 +55,26 @@ func (c *Channel) WriteAsync(data []byte) *Future {
 	future := NewFuture()
 	c.looper.Post(func() {
 		if c.active {
-			_, err := c.conn.Write(data)
-			future.Complete(err)
+			c.Pipeline.FireWrite(data)
+			//future.Complete(nil)
 		} else {
 			future.Complete(io.ErrClosedPipe)
 		}
 	})
+	c.future = future
 	return future
 }
 
 // Close 关闭通道
 func (c *Channel) Close() {
 	c.closeOnce.Do(func() {
-		c.looper.Post(func() {
-			if c.active {
-				c.active = false
-				c.conn.Close()
-				c.Pipeline.FireInactive()
-			}
-		})
+		//c.looper.Post(func() {
+		if c.active {
+			c.active = false
+			c.conn.Close()
+			c.Pipeline.FireInactive()
+		}
+		//})
 	})
 }
 

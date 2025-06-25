@@ -8,7 +8,9 @@ import (
 
 func main() {
 	opts := make([]client.Option, 0)
-	opts = append(opts, client.WithAddr("127.0.0.1:9090"))
+	opts = append(opts, client.WithProps(client.NettyClientProperties{
+		Addr: "127.0.0.1:9090",
+	}))
 	opts = append(opts, client.AppendHandler(&ag_netty.ConnectorHandler{}))
 	opts = append(opts, client.AppendHandler(ag_netty.NewLoggingHandler("client")))
 	opts = append(opts, client.AppendHandler(&client.EchoHandler{EchoHandler: &ag_netty.EchoHandler{}}))
@@ -24,6 +26,6 @@ func main() {
 		return
 	}
 
-	clientWithOpts.Send([]byte("hello ag server"))
-	select {}
+	async, _ := clientWithOpts.SendAndGet([]byte("hello ag server"))
+	println(async.(string))
 }

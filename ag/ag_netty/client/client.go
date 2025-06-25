@@ -8,7 +8,7 @@ import (
 
 type Client struct {
 	*ag_netty.Client
-	addr     string
+	props    NettyClientProperties
 	handlers []ag_netty.ChannelHandler
 	logger   *slog.Logger
 }
@@ -17,10 +17,10 @@ type Option struct {
 	opt func(client *Client)
 }
 
-func WithAddr(addr string) Option {
+func WithProps(props NettyClientProperties) Option {
 	return Option{
 		opt: func(c *Client) {
-			c.addr = addr
+			c.props = props
 		},
 	}
 }
@@ -51,7 +51,14 @@ func newClient(logger *slog.Logger, opts ...Option) *Client {
 		}
 	}
 
-	client := ag_netty.NewClient(c.addr, initFunc)
+	client := ag_netty.NewClient(
+		c.props.Addr,
+		ag_netty.ToTimeoutDuration(c.props.ConnectTimeout),
+		ag_netty.ToTimeoutDuration(c.props.ReadTimeout),
+		ag_netty.ToTimeoutDuration(c.props.WriteTimeout),
+		ag_netty.ToTimeoutDuration(c.props.IdleTimeout),
+		initFunc,
+	)
 	c.Client = client
 	return c
 }
@@ -75,6 +82,6 @@ type EchoHandler struct {
 }
 
 func (h *EchoHandler) HandleRead(ctx *ag_netty.HandlerContext, data []byte) {
-	defer ctx.Close()
 	slog.Info("Received response", "data", string(data))
+	ctx.Channel().Future().Complete(string(data))
 }

@@ -4,8 +4,8 @@ import (
 	"ag-core/ag/ag_conf"
 	"ag-core/ag/ag_netty"
 	"ag-core/ag/ag_netty/client"
-	"errors"
 	"go.uber.org/fx"
+	"log/slog"
 )
 
 // FxNettyClientBaseModule 创建裸netty client
@@ -23,7 +23,7 @@ var FxNettyClientBaseModule = fx.Module("fx_netty_client_base",
 	fx.Provide(
 		fx.Annotate(
 			FxClientLoggerOption,
-			fx.ResultTags(`group:"ag_netty_client_options"`),
+			//fx.ResultTags(`group:"ag_netty_client_options"`),
 		),
 	),
 	fx.Provide(
@@ -38,18 +38,22 @@ var FxNettyClientBaseModule = fx.Module("fx_netty_client_base",
 type FxNettyClientInParam struct {
 	fx.In
 
-	Env ag_conf.IConfigurableEnvironment
+	Env    ag_conf.IConfigurableEnvironment
+	Binder ag_conf.IBinder
 
 	CustomOptions []client.Option `group:"ag_netty_client_options" ,optional:"true"`
 }
 
 func FxNewNettyClientWithSuite(params FxNettyClientInParam) (*client.NettyOptionSuite, error) {
-	remoteAddr := params.Env.GetProperty("netty.remote.addr")
-	if remoteAddr == "" {
-		return nil, errors.New("netty.remote.addr is required")
+	var clientProps client.NettyClientProperties
+	err := params.Binder.Bind(&clientProps, client.NettyClientPropertiesPrefix)
+	if err != nil {
+		slog.Error("ag_netty client config error", "error", err)
+		return nil, err
 	}
+
 	opts := params.CustomOptions
-	opts = append(opts, client.WithAddr(remoteAddr))
+	opts = append(opts, client.WithProps(clientProps))
 	return &client.NettyOptionSuite{
 		Opts: opts,
 	}, nil

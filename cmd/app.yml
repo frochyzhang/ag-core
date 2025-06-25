@@ -14,8 +14,9 @@ kitex:
     songbservice:
       endpoint: songb
 netty:
-  remote:
+  client:
     addr: 127.0.0.1:9090
+    read-timeout: 5
 data:
   db:
     user:
