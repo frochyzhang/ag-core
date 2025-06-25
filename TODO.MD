@@ -10,6 +10,6 @@
 - [ ]  链路追踪（skywalking）
 - [ ]  自定义服务发现的LB
 - [ ]  redis & kafka
-- [ ]  socket通信 长连接 client & server
-- [ ]  http服务注册
+- [x]  socket通信 长连接 client & server
+- [x]  http服务注册
 - [ ]  线程数&连接数
