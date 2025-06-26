@@ -5,6 +5,8 @@ import (
 	"ag-core/ag/ag_ext/ip"
 	"context"
 	"fmt"
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/route"
 	"log/slog"
 	"net"
 	"time"
@@ -14,21 +16,31 @@ import (
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/hertz-contrib/registry/nacos"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
-
-	"github.com/spf13/cast"
 )
+
+type Route struct {
+	HttpMethod, RelativePath string
+	Handlers                 []app.HandlerFunc
+}
 
 type Server struct {
 	*server.Hertz
+	root   *route.RouterGroup
 	logger *slog.Logger
 }
 
 type Option func(*Server)
 
+func WithRoute(r *Route) Option {
+	return func(s *Server) {
+		s.root.Handle(r.HttpMethod, r.RelativePath, r.Handlers...)
+	}
+}
 func NewServer(hertz *server.Hertz, logger *slog.Logger, opts ...Option) *Server {
 	s := &Server{
 		Hertz:  hertz,
 		logger: logger,
+		root:   hertz.Group("/", rootMw()...),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -37,31 +49,8 @@ func NewServer(hertz *server.Hertz, logger *slog.Logger, opts ...Option) *Server
 	return s
 }
 
-// NewOriginalHertzServer 创建一个原始的Hertz实例,仅提供http监听，不注册服务
-// logger: 日志记录器
-// conf: 配置环境
-// 返回一个Server实例
-func NewOriginalHertzServer(
-	logger *slog.Logger,
-	conf ag_conf.IConfigurableEnvironment,
-) *Server {
-	host := conf.GetProperty("hertz.server.host")
-	port, err := cast.ToIntE(conf.GetProperty("hertz.server.port"))
-	if err != nil {
-		panic(err)
-	}
-
-	addr := fmt.Sprintf("%s:%d", host, port)
-	hertz := server.Default(
-		server.WithHostPorts(addr),
-	)
-
-	s := NewServer(
-		hertz,
-		logger,
-	)
-
-	return s
+func rootMw() []app.HandlerFunc {
+	return nil
 }
 
 // NewHertzServerWithSuit 创建一个Hertz服务实例，使用配置套件，并且注册服务
@@ -76,6 +65,7 @@ func NewHertzServerWithSuit(
 		server.Default(
 			suite.Options()...),
 		logger,
+		suite.Routers()...,
 	)
 }
 
@@ -102,30 +92,33 @@ func (s *Server) Stop(ctx context.Context) error {
 
 // HertzOptionSuite 定义了Hertz服务的配置套件
 type HertzOptionSuite struct {
-	Opts []config.Option
+	opts    []config.Option
+	routers []Option
 }
 
 // Options 返回配置项
 func (s *HertzOptionSuite) Options() []config.Option {
-	return s.Opts
+	return s.opts
+}
+func (s *HertzOptionSuite) Routers() []Option {
+	return s.routers
 }
 
 // HertzSuiteBuilder 定义了Hertz服务配置套件的构建器
 type HertzSuiteBuilder struct {
-	Env          ag_conf.IConfigurableEnvironment
-	Binder       ag_conf.IBinder
-	CustOptions  []config.Option
-	NamingClient naming_client.INamingClient
+	Env           ag_conf.IConfigurableEnvironment
+	Binder        ag_conf.IBinder
+	CustOptions   []config.Option
+	RouterOptions []Option
+	NamingClient  naming_client.INamingClient
 }
 
 // BuildSuite 构建Hertz服务配置套件
 func (builder *HertzSuiteBuilder) BuildSuite() (*HertzOptionSuite, error) {
 	suite := &HertzOptionSuite{
-		Opts: make([]config.Option, 0),
+		opts:    builder.CustOptions,
+		routers: builder.RouterOptions,
 	}
-
-	// 自定义的配置项
-	suite.Opts = append(suite.Opts, builder.CustOptions...)
 
 	var hconf HertzServerProperties
 	err := builder.Binder.Bind(&hconf, hertzServerPropertiesPrefix)
@@ -142,7 +135,7 @@ func (builder *HertzSuiteBuilder) BuildSuite() (*HertzOptionSuite, error) {
 
 	hertzHostStr := fmt.Sprintf("%s:%d", host, port)
 	slog.Info("hertz", "host", hertzHostStr)
-	suite.Opts = append(suite.Opts, server.WithHostPorts(hertzHostStr))
+	suite.opts = append(suite.opts, server.WithHostPorts(hertzHostStr))
 
 	// 注册中心配置
 	var nacosRegistry registry.Registry
@@ -191,8 +184,8 @@ func (builder *HertzSuiteBuilder) BuildSuite() (*HertzOptionSuite, error) {
 		tags["lang_type"] = "Golang"
 		regInfo.Tags = tags
 
-		suite.Opts = append(
-			suite.Opts,
+		suite.opts = append(
+			suite.opts,
 			server.WithRegistry(
 				nacosRegistry,
 				regInfo,
