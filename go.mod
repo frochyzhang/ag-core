@@ -1,4 +1,4 @@
-module ag-core
+module github.com/frochyzhang/ag-core
 
 go 1.23.6
 

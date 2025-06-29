@@ -1,7 +1,7 @@
 package fxs
 
 import (
-	"ag-core/ag/ag_db/gormdb"
+	"github.com/frochyzhang/ag-core/ag/ag_db/gormdb"
 
 	"go.uber.org/fx"
 )

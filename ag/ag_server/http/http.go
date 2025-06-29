@@ -1,10 +1,10 @@
 package http
 
 import (
-	"ag-core/ag/ag_conf"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
 	"log"
 	"log/slog"
 	"net/http"
@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cast"
 )
 
+type Server struct 
 type Server struct {
 	*gin.Engine
 	httpSrv *http.Server

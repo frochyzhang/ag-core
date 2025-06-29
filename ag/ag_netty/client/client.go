@@ -1,8 +1,8 @@
 package client
 
 import (
-	"ag-core/ag/ag_netty"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_netty"
 	"log/slog"
 )
 

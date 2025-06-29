@@ -1,7 +1,7 @@
 package fxs
 
 import (
-	agkc "ag-core/ag/ag_kitex/client"
+	agkc "github.com/frochyzhang/ag-core/ag/ag_kitex/client"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"

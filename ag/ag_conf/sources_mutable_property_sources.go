@@ -1,8 +1,8 @@
 package ag_conf
 
 import (
-	"ag-core/ag/ag_ext"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_ext"
 	"sync"
 )
 

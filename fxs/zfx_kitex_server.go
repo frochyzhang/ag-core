@@ -1,12 +1,12 @@
 package fxs
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_server"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_server"
 
-	// "ag-core/ag/ag_server/kitex"
+	// github.com/frochyzhang/ag-core/ag/ag_server/kitex"
 
-	agks "ag-core/ag/ag_kitex/server"
+	agks "github.com/frochyzhang/ag-core/ag/ag_kitex/server"
 
 	"github.com/cloudwego/kitex/server"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"

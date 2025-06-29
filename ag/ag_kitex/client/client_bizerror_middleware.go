@@ -1,8 +1,8 @@
 package client
 
 import (
-	"ag-core/ag/ag_error"
 	"context"
+	"github.com/frochyzhang/ag-core/ag/ag_error"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/endpoint"

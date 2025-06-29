@@ -1,9 +1,9 @@
 package ag_conf_test
 
 import (
-	"ag-core/ag/ag_conf"
 	"encoding/json"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
 	"log/slog"
 	"reflect"
 	"testing"

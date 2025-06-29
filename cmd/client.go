@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ag-core/ag/ag_netty"
-	"ag-core/ag/ag_netty/client"
+	"github.com/frochyzhang/ag-core/ag/ag_netty"
+	"github.com/frochyzhang/ag-core/ag/ag_netty/client"
 	"log/slog"
 )
 

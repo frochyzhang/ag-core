@@ -1,10 +1,10 @@
 package main
 
 import (
-	"ag-core/ag/ag_app"
-	"ag-core/fxs"
 	"embed"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_app"
+	"github.com/frochyzhang/ag-core/fxs"
 	"go.uber.org/fx"
 	"runtime/pprof"
 )

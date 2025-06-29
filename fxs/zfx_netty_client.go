@@ -1,9 +1,9 @@
 package fxs
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_netty"
-	"ag-core/ag/ag_netty/client"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_netty"
+	"github.com/frochyzhang/ag-core/ag/ag_netty/client"
 	"go.uber.org/fx"
 	"log/slog"
 )

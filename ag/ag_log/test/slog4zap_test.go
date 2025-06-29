@@ -1,10 +1,10 @@
 package test
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_ext"
-	"ag-core/ag/ag_log"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_ext"
+	"github.com/frochyzhang/ag-core/ag/ag_log"
 	"log/slog"
 	"os"
 	"testing"

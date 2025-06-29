@@ -1,11 +1,11 @@
 package ag_nacos
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_conf/reader/yaml"
-	"ag-core/ag/ag_ext"
 	"encoding/json"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_conf/reader/yaml"
+	"github.com/frochyzhang/ag-core/ag/ag_ext"
 	"os"
 	"testing"
 )

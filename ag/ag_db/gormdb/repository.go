@@ -1,9 +1,9 @@
 package gormdb
 
 import (
-	"ag-core/ag/ag_db"
 	"context"
 	"database/sql"
+	"github.com/frochyzhang/ag-core/ag/ag_db"
 	"log/slog"
 
 	"gorm.io/gorm"
@@ -24,7 +24,7 @@ func NewRepository(
 	logger *slog.Logger,
 	//	logger *log.Logger,
 	db *gorm.DB,
-	//tm TransactionManager, // 循环注入
+	// tm TransactionManager, // 循环注入
 ) *Repository {
 
 	rep := &Repository{

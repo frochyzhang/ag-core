@@ -1,11 +1,11 @@
 package ag_conf
 
 import (
-	"ag-core/ag/ag_conf/reader/prop"
-	"ag-core/ag/ag_conf/reader/yaml"
-	"ag-core/ag/ag_ext"
 	"embed"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_conf/reader/prop"
+	"github.com/frochyzhang/ag-core/ag/ag_conf/reader/yaml"
+	"github.com/frochyzhang/ag-core/ag/ag_ext"
 	"log/slog"
 	"os"
 	"path/filepath"

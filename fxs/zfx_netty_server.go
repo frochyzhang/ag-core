@@ -1,10 +1,10 @@
 package fxs
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_netty"
-	"ag-core/ag/ag_netty/server"
-	"ag-core/ag/ag_server"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_netty"
+	"github.com/frochyzhang/ag-core/ag/ag_netty/server"
+	"github.com/frochyzhang/ag-core/ag/ag_server"
 	"go.uber.org/fx"
 )
 

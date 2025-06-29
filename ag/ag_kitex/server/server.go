@@ -1,11 +1,11 @@
 package server
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_ext/ip"
 	"context"
 	"fmt"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_ext/ip"
 	"log/slog"
 	"net"
 	"time"

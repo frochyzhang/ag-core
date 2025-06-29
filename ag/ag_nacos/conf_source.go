@@ -1,6 +1,6 @@
 package ag_nacos
 
-import "ag-core/ag/ag_conf"
+import "github.com/frochyzhang/ag-core/ag/ag_conf"
 
 // NacosPropertySource nacos配置实体
 type NacosPropertySource struct {

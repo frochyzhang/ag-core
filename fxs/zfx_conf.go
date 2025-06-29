@@ -1,7 +1,7 @@
 package fxs
 
 import (
-	"ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
 
 	"go.uber.org/fx"
 )

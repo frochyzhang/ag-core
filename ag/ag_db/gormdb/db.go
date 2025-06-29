@@ -1,7 +1,7 @@
 package gormdb
 
 import (
-	"ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
 	"time"
 
 	gormibmdb "github.com/ZhengweiHou/gorm_ibmdb"

@@ -1,7 +1,7 @@
 package ag_conf
 
 import (
-	"ag-core/ag/ag_crypto"
+	"github.com/frochyzhang/ag-core/ag/ag_crypto"
 	"strings"
 )
 

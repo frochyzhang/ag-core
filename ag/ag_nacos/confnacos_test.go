@@ -1,7 +1,7 @@
 package ag_nacos
 
 import (
-	"ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
 	"testing"
 )
 

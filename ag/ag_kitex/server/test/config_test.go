@@ -1,11 +1,11 @@
 package kitex_test
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_ext"
-	kitex "ag-core/ag/ag_kitex/server"
 	"encoding/json"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_ext"
+	kitex "github.com/frochyzhang/ag-core/ag/ag_kitex/server"
 	"log/slog"
 	"os"
 	"reflect"

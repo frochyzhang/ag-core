@@ -1,9 +1,9 @@
 package ag_app
 
 import (
-	"ag-core/ag/ag_server"
 	"context"
 	"fmt"
+	"github.com/frochyzhang/ag-core/ag/ag_server"
 	"log"
 	"log/slog"
 	"os"

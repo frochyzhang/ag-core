@@ -1,7 +1,7 @@
 package client
 
 import (
-	"ag-core/ag/ag_ext"
+	"github.com/frochyzhang/ag-core/ag/ag_ext"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/transport"

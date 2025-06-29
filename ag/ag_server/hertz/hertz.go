@@ -1,12 +1,12 @@
 package hertz
 
 import (
-	"ag-core/ag/ag_conf"
-	"ag-core/ag/ag_ext/ip"
 	"context"
 	"fmt"
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/route"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_ext/ip"
 	"log/slog"
 	"net"
 	"time"
@@ -18,6 +18,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
 )
 
+type Route struct 
 type Route struct {
 	HttpMethod, RelativePath string
 	Handlers                 []app.HandlerFunc

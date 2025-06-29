@@ -1,7 +1,7 @@
 package fxs
 
 import (
-	"ag-core/ag/ag_nacos"
+	"github.com/frochyzhang/ag-core/ag/ag_nacos"
 
 	"go.uber.org/fx"
 )
