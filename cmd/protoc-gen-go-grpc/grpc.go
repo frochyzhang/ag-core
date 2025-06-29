@@ -77,7 +77,7 @@ func genService(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFi
 	pkgInfo := PkgInfo{
 		PkgName:    string(file.GoPackageName),
 		PkgRefName: string(file.GoPackageName),
-		//ImportPath: "github.com/frochyzhang/ag-layout/hertz/hello",
+		//ImportPath: "github.com/frochyzhang/ag-core/hertz/hello",
 	}
 	si := &ServiceInfo{
 		PkgInfo:        pkgInfo,
