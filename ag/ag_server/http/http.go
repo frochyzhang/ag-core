@@ -14,7 +14,6 @@ import (
 	"github.com/spf13/cast"
 )
 
-type Server struct 
 type Server struct {
 	*gin.Engine
 	httpSrv *http.Server

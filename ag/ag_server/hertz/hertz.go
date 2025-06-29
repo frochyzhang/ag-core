@@ -18,7 +18,6 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
 )
 
-type Route struct 
 type Route struct {
 	HttpMethod, RelativePath string
 	Handlers                 []app.HandlerFunc
