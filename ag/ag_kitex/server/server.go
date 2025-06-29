@@ -5,6 +5,7 @@ import (
 	"ag-core/ag/ag_ext/ip"
 	"context"
 	"fmt"
+	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
 	"log/slog"
 	"net"
 	"time"
@@ -131,10 +132,38 @@ func NewKitexOriginalServer(
 	return svr
 }
 
+type KitexServerRegistrar struct {
+	Regs []Option
+}
+
+func (s *KitexServerRegistrar) Registrars() []Option {
+	return s.Regs
+}
+
+type Option func(server.Server)
+
+type ServiceRegistrar struct {
+	*kitex.ServiceInfo
+	Handler interface{}
+}
+
+func WithServiceRegistrar(sr *ServiceRegistrar) Option {
+	return func(s server.Server) {
+		err := s.RegisterService(sr.ServiceInfo, sr.Handler)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func NewKitexServerWithSuit(
 	suite server.Suite,
+	registrar KitexServerRegistrar,
 ) server.Server {
 	svr := server.NewServer(server.WithSuite(suite))
+	for _, r := range registrar.Registrars() {
+		r(svr)
+	}
 	return svr
 }
 

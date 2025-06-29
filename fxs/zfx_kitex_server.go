@@ -30,6 +30,8 @@ var FxKitexServerBaseModule = fx.Module(
 		// agkitex server middleware 入口，可按顺序执行agkitex server 自定义middleware
 		FxBuildAgKitexServerMiddleware,
 
+		FxBuildKitexServerRegistrar,
+
 		/* === 2. 将原生kitex server 包装为ag server, 并注入到APP服务列表中 === */
 		fx.Annotate(
 			// kitex server 包装为ag server
@@ -74,10 +76,22 @@ func FxBuilderKitexServerSuite(params FxInKitexServerParams) (server.Suite, erro
 	return build.BuildSuite()
 }
 
+type FxInKitexServiceRegistrars struct {
+	fx.In
+
+	Registrars []agks.Option `group:"ag_kitex_server_registrars",optional:"true"`
+}
+
 type FxAgKitexServerMiddlewareInParams struct {
 	fx.In
 
 	Middlewares []agks.IAgKitexServerMiddleware `group:"ag_kitex_server_middlewares",optional:"true"`
+}
+
+func FxBuildKitexServerRegistrar(in FxInKitexServiceRegistrars) agks.KitexServerRegistrar {
+	return agks.KitexServerRegistrar{
+		Regs: in.Registrars,
+	}
 }
 
 func FxBuildAgKitexServerMiddleware(p FxAgKitexServerMiddlewareInParams) *agks.AgKitexServerMiddleware {
