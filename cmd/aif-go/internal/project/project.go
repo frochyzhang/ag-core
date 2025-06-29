@@ -32,7 +32,7 @@ var (
 
 func init() {
 	if repoURL = os.Getenv("KRATOS_LAYOUT_REPO"); repoURL == "" {
-		repoURL = "https://github.com/frochyzhang/ag-core.git"
+		repoURL = "https://github.com/frochyzhang/ag-layout.git"
 	}
 	timeout = "120s"
 	CmdNew.Flags().StringVarP(&repoURL, "repo-url", "r", repoURL, "layout repo")
