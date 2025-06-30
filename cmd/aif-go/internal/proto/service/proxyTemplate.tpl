@@ -8,7 +8,7 @@ import (
 	"time"
 
 	pb "{{.PbPkg}}"
-	mw "github.com/frochyzhang/ag-layout/internal/service/middleware"
+	mw "github.com/frochyzhang/ag-core/ag/ag_ext"
 )
 
 // ===================== 接口定义 =====================
@@ -68,5 +68,4 @@ func (p *{{$lowerIfcName}}ProxyImpl) {{.Name}}(ctx context.Context, in *pb.{{.Re
 
     log.Printf("[%s] success in %v", methodName, time.Since(start))
     return res.(*pb.{{.Reply}}), nil
-}
-{{end}}
+}{{end}}
