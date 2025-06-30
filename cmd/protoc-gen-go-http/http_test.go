@@ -14,15 +14,14 @@ func TestNoParameters(t *testing.T) {
 }
 
 func TestSingleParam(t *testing.T) {
-	println(lowerFirst("NameInfo"))
-	//path := "/test/{message.id}"
-	//m := buildPathVars(path)
-	//if !reflect.DeepEqual(len(m), 1) {
-	//	t.Fatalf("len(m) not is 1")
-	//}
-	//if m["message.id"] != nil {
-	//	t.Fatalf(`m["message.id"] should be empty`)
-	//}
+	path := "/test/:message.id"
+	m := buildPathVars(path)
+	if !reflect.DeepEqual(len(m), 1) {
+		t.Fatalf("len(m) not is 1")
+	}
+	if m["message.id"] != nil {
+		t.Fatalf(`m["message.id"] should be empty`)
+	}
 }
 
 func TestTwoParametersReplacement(t *testing.T) {

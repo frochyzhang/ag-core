@@ -32,16 +32,45 @@ func run(_ *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, "Please specify the proto file. Example: kratos proto service api/xxx.proto")
 		return
 	}
+	var services []*Service
 	for _, f := range args {
-		generateFile(f)
+		services = generateFile(f)
+		generateServiceProxy(services)
 	}
 	generateService(args)
 }
 
-func generateService(f []string) {
+func generateServiceProxy(services []*Service) {
+	for _, service := range services {
+		iface := &Interface{
+			Name:    service.Service,
+			PbPkg:   service.Package,
+			Methods: service.Methods,
+		}
+		if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+			fmt.Printf("Target directory: %s does not exist\n", targetDir)
+			return
+		}
+		to := filepath.Join(targetDir, strings.ToLower(iface.Name)+"_service_proxy.go")
+		if _, err := os.Stat(to); !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Already exists: %s\n", to)
+			continue
+		}
+		b, err := iface.execute()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := os.WriteFile(to, b, 0o644); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(to)
+	}
+}
+
+func generateService(ff []string) {
 	pkgs := make([]string, 0)
 	annos := make([]Annotate, 0)
-	for _, f := range f {
+	for _, f := range ff {
 		reader, err := os.Open(f)
 		if err != nil {
 			log.Fatal(err)
@@ -101,7 +130,7 @@ func generateService(f []string) {
 	fmt.Println(to)
 }
 
-func generateFile(f string) {
+func generateFile(f string) []*Service {
 	reader, err := os.Open(f)
 	if err != nil {
 		log.Fatal(err)
@@ -144,7 +173,7 @@ func generateFile(f string) {
 	)
 	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
 		fmt.Printf("Target directory: %s does not exist\n", targetDir)
-		return
+		return nil
 	}
 	for _, s := range res {
 		to := filepath.Join(targetDir, strings.ToLower(s.Service)+".go")
@@ -161,6 +190,7 @@ func generateFile(f string) {
 		}
 		fmt.Println(to)
 	}
+	return res
 }
 
 func getMethodType(streamsRequest, streamsReturns bool) MethodType {

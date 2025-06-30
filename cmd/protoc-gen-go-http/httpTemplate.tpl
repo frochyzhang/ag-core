@@ -5,17 +5,8 @@
 const Operation{{$svrType}}{{.OriginalName}} = "/{{$svrName}}/{{.OriginalName}}"
 {{- end}}
 
-type {{.ServiceType}}HTTPServer interface {
-{{- range .MethodSets}}
-	{{- if ne .Comment ""}}
-	{{.Comment}}
-	{{- end}}
-	{{.Name}}(context.Context, *{{.Request}}) (*{{.Reply}}, error)
-{{- end}}
-}
-
 {{- range .Methods}}
-func Register_{{$svrType}}_{{.Name}}_HTTPServer(srv {{$svrType}}HTTPServer) hertz.Option {
+func Register_{{$svrType}}_{{.Name}}_HTTPServer(srv {{$svrType}}Server) hertz.Option {
 	return hertz.WithRoute(&hertz.Route{
 		HttpMethod:   "{{.Method}}",
 		RelativePath: "{{.Path}}",
@@ -25,7 +16,7 @@ func Register_{{$svrType}}_{{.Name}}_HTTPServer(srv {{$svrType}}HTTPServer) hert
 {{- end}}
 
 {{range .Methods}}
-func _{{$svrType}}_{{.Name}}{{.Num}}_HTTP_Handler(srv {{$svrType}}HTTPServer) func(ctx context.Context, c *app.RequestContext) {
+func _{{$svrType}}_{{.Name}}{{.Num}}_HTTP_Handler(srv {{$svrType}}Server) func(ctx context.Context, c *app.RequestContext) {
 	return func(ctx context.Context, c *app.RequestContext) {
 		var in = new({{.Request}})
 		{{- if .HasBody}}

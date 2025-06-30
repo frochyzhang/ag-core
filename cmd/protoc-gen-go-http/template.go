@@ -10,6 +10,9 @@ import (
 //go:embed httpTemplate.tpl
 var httpTemplate string
 
+//go:embed serverTemplate.tbl
+var serverTemplate string
+
 type serviceDesc struct {
 	ServiceType string // Greeter
 	ServiceName string // helloworld.Greeter
@@ -35,13 +38,21 @@ type methodDesc struct {
 	ResponseBody string
 }
 
-func (s *serviceDesc) execute() string {
+func (s *serviceDesc) execute(t string) string {
 	s.MethodSets = make(map[string]*methodDesc)
 	for _, m := range s.Methods {
 		s.MethodSets[m.Name] = m
 	}
 	buf := new(bytes.Buffer)
-	tmpl, err := template.New("http").Parse(strings.TrimSpace(httpTemplate))
+	var tpl string
+	switch t {
+	case "server":
+		tpl = serverTemplate
+	case "http":
+		tpl = httpTemplate
+	}
+	println(t, buf.String())
+	tmpl, err := template.New(tpl).Parse(strings.TrimSpace(tpl))
 	if err != nil {
 		panic(err)
 	}

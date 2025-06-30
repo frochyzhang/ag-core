@@ -26,7 +26,7 @@ var {{LowerFirst .ServiceName}}Methods = map[string]serviceinfo.MethodInfo{
 	{{- end}}
 }
 
-func Register_{{.ServiceName}}_GRPCServer(srv {{.ServiceType}}GRPCServer) server.Option {
+func Register_{{.ServiceName}}_GRPCServer(srv {{.ServiceType}}Server) server.Option {
 	return server.WithServiceRegistrar(&server.ServiceRegistrar{
 		ServiceInfo: New{{.ServiceName}}ServiceInfo(),
 		Handler: srv,
@@ -50,13 +50,6 @@ func New{{.ServiceName}}ServiceInfoForClient() *serviceinfo.ServiceInfo {
 func New{{.ServiceName}}ServiceInfoForStreamClient() *serviceinfo.ServiceInfo {
 	return new{{.ServiceName}}ServiceInfo(true, true, false)
 }
-
-type {{.ServiceName}}GRPCServer interface {
-	{{- range .AllMethods}}
-	{{.RawName}}(context.Context,{{- range .Args}}{{.Type}}{{- end}})({{.Resp.Type}}, error)
-	{{- end}}
-}
-
 
 func new{{.ServiceName}}ServiceInfo(hasStreaming bool, keepStreamingMethods bool, keepNonStreamingMethods bool) *serviceinfo.ServiceInfo {
 	serviceName := "{{.RawServiceName}}"
@@ -117,13 +110,13 @@ func {{LowerFirst .Name}}Handler(ctx context.Context, handler interface{}, arg, 
 		if err := st.RecvMsg(req); err != nil {
 			return err
 		}
-		resp, err := handler.({{.ServiceName}}GRPCServer).{{.Name}}(ctx, req)
+		resp, err := handler.({{.ServiceName}}Server).{{.Name}}(ctx, req)
 		if err != nil {
 			return err
 		}
 		return st.SendMsg(resp)
 	case *{{if not .GenArgResultStruct}}{{.PkgRefName}}.{{end}}{{.ArgStructName}}:
-		success, err := handler.({{.ServiceName}}GRPCServer).{{.Name}}(ctx{{range .Args}}, s.{{.Name}}{{end}})
+		success, err := handler.({{.ServiceName}}Server).{{.Name}}(ctx{{range .Args}}, s.{{.Name}}{{end}})
 		if err != nil {
 			return err
 		}

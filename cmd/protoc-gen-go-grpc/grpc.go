@@ -85,7 +85,7 @@ func genService(_ *protogen.Plugin, file *protogen.File, g *protogen.GeneratedFi
 		RawServiceName: serviceName,
 		ServiceType:    serviceName,
 		ServiceTypeName: func() string {
-			return fmt.Sprintf("%sGRPCServer", service.GoName)
+			return fmt.Sprintf("%sServer", service.GoName)
 		},
 		AllMethods:            []*MethodInfo{},
 		HasStreaming:          false,
