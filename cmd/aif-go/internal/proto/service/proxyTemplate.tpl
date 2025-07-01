@@ -4,11 +4,14 @@ package service
 
 import (
 	"context"
+	"github.com/spf13/cast"
 	"log"
 	"time"
 
 	pb "{{.PbPkg}}"
 	mw "github.com/frochyzhang/ag-core/ag/ag_ext"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_db/gormdb"
 )
 
 // ===================== 接口定义 =====================
@@ -26,10 +29,16 @@ type {{toLower .Name}}ProxyImpl struct {
 	middlewares  []mw.Middleware
 }
 
-func New{{$ifcName}}Proxy(service *{{$ifcName}}Service) {{$ifcName}}Proxy {
+func New{{$ifcName}}Proxy(env ag_conf.IConfigurableEnvironment, tmCtx *gormdb.TmMiddlewareContext, service *{{$ifcName}}Service) {{$ifcName}}Proxy {
+    mws := make([]mw.Middleware, 0)
+	useTx := cast.ToBool(env.GetProperty("data.db.user.use-tx"))
+	if useTx {
+		mws = append(mws,tmCtx.TransactionMiddleware)
+	}
+
 	return &{{$lowerIfcName}}ProxyImpl{
 		service:     service,
-		middlewares: make([]mw.Middleware, 0),
+		middlewares: mws,
 	}
 }
 

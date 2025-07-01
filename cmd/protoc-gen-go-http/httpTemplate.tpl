@@ -38,6 +38,7 @@ func _{{$svrType}}_{{.Name}}{{.Num}}_HTTP_Handler(srv {{$svrType}}Server) func(c
 		reply, err := srv.{{.Name}}(ctx, in)
 		if err != nil {
 			c.String(consts.StatusInternalServerError, err.Error())
+			return
 		}
 		c.JSON(consts.StatusOK, reply{{.ResponseBody}})
 	}

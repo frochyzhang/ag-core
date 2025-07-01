@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/frochyzhang/ag-core/cmd/aif-go/internal/db"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -22,6 +23,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(project.CmdNew)
 	rootCmd.AddCommand(proto.CmdProto)
+	rootCmd.AddCommand(db.CmdDb)
 	rootCmd.AddCommand(upgrade.CmdUpgrade)
 	rootCmd.AddCommand(change.CmdChange)
 	rootCmd.AddCommand(run.CmdRun)
