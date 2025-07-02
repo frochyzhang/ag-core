@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 //go:embed templates/*.tmpl
@@ -16,20 +15,20 @@ var TemplateFS embed.FS
 func GenerateSchema(schemaConfig *SchemaConfig) {
 	// 解析excel文件
 	var parse Parse = &YamlParse{}
-	ch := make(chan *TableData, 20)
-	wait := &sync.WaitGroup{}
+	//ch := make(chan *TableData, 20)
+	//wait := &sync.WaitGroup{}
 	// 并行将数据添加到信道
-	parse.ParseFile(schemaConfig, ch, wait)
+	ch := parse.ParseFile(schemaConfig)
 	// 数据渲染template
-	for schemaData := range ch {
+	for _, schemaData := range ch {
 		schemaData.PackageName = schemaConfig.PackageName
 		// 要保证main函数没有结束前执行这些内容
-		go CreteSchemaGoFile(schemaConfig, schemaData, wait)
+		CreteSchemaGoFile(schemaConfig, schemaData)
 	}
-	wait.Wait()
+	//wait.Wait()
 }
 
-func CreteSchemaGoFile(conf *SchemaConfig, schemaData *TableData, wait *sync.WaitGroup) {
+func CreteSchemaGoFile(conf *SchemaConfig, schemaData *TableData) {
 
 	if conf.OutputPath == "" {
 		wd, err := os.Getwd()
@@ -39,7 +38,6 @@ func CreteSchemaGoFile(conf *SchemaConfig, schemaData *TableData, wait *sync.Wai
 		conf.OutputPath = wd + "/repository/"
 	}
 	log.Println("当前工作目录:", conf.OutputPath)
-	defer wait.Done()
 	createStructGoFile(conf.OutputPath, schemaData)
 	createDaoGoFile(conf.OutputPath, schemaData)
 }

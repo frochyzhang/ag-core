@@ -73,10 +73,10 @@ type TableData struct {
 	// 唯一索引数据
 	UniqueIndexList []*IndexData
 	// 主键数据
-	// PrimryIndexList []*IndexData
-	PrimryRIndex *IndexData
-	PrimryUIndex *IndexData
-	PrimryDIndex *IndexData
+	// PrimaryIndexList []*IndexData
+	PrimaryRIndex *IndexData
+	PrimaryUIndex *IndexData
+	PrimaryDIndex *IndexData
 
 	RNamingSqlList   []*NamingSqlTemplate
 	CUDNamingSqlList []*NamingSqlTemplate
@@ -90,8 +90,8 @@ type IndexData struct {
 	// 方法参数列表
 	BindParamList []*BindParam
 	// 方法参数列表
-	HashParamters string
-	MethodName    string
+	HashParameters string
+	MethodName     string
 }
 
 type NamingSqlTemplate struct {

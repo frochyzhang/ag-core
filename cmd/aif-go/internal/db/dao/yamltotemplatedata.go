@@ -95,14 +95,14 @@ func createPrimaryData(primarykeys []string, tableData *TableData, wait *sync.Wa
 		list = append(list, bindParam)
 	}
 	indexData.BindParamList = list
-	indexData.HashParamters = strings.Join(tempArr, ",")
-	tableData.PrimryRIndex = indexData
+	indexData.HashParameters = strings.Join(tempArr, ",")
+	tableData.PrimaryRIndex = indexData
 	// 按照主键删除记录
 	deleteIndexData := &IndexData{IndexName: "DeleteByPrimaryKey"}
 	deleteIndexData.BindParamList = indexData.BindParamList
-	deleteIndexData.HashParamters = indexData.HashParamters
+	deleteIndexData.HashParameters = indexData.HashParameters
 	// primaryIndexList=append(primaryIndexList, deleteIndexData)
-	tableData.PrimryDIndex = deleteIndexData
+	tableData.PrimaryDIndex = deleteIndexData
 }
 
 // 构建 table model
@@ -157,7 +157,7 @@ func createIndexData(indexDataList []*IndexData, tableData *TableData, indexType
 			bindParam.GoColName = coldata.GoColName
 		}
 		// 构建索引列表参数
-		indexData.HashParamters = strings.Join(tempArr, ",")
+		indexData.HashParameters = strings.Join(tempArr, ",")
 		indexData.MethodName = builder.String()
 		// 构建 gorm 自动化拼接sql的参数
 	}
