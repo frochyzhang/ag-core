@@ -17,7 +17,7 @@ type Middleware func(
 ) (interface{}, error)
 
 // 注册单个方法的处理链
-func registerHandler(proxy interface{}, methodName string, middlewares []Middleware, handler HandlerFunc) HandlerFunc {
+func RegisterHandler(methodName string, middlewares []Middleware, handler HandlerFunc) HandlerFunc {
 	// 从后向前包装中间件
 	wrappedHandler := handler
 	for i := len(middlewares) - 1; i >= 0; i-- {
