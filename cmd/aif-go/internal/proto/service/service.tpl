@@ -17,12 +17,12 @@ var FxServiceModule = fx.Module("fx-service",
 
 type BaseFxMiddlewareParams struct {
 	fx.In
-	GlobalMws []mw.Middleware              `group:"fx_global_service_middleware" ,optional:"true"`
+	GlobalMws []mw.PrioritizedMiddleware              `group:"fx_global_service_middleware" ,optional:"true"`
 }
 {{ range .Names }}
 type Fx{{.Name}}Middleware struct {
 	BaseFxMiddlewareParams
-	CustomMws []mw.Middleware              `group:"fx_{{toLower .Name}}_service_middleware" ,optional:"true"`
+	CustomMws []mw.PrioritizedMiddleware              `group:"fx_{{toLower .Name}}_service_middleware" ,optional:"true"`
 }
 
 func New{{.Name}}ProxyWithParams(in Fx{{.Name}}Middleware,service *{{.Name}}Service) {{ .Brief }}.{{ .Name }}Server {

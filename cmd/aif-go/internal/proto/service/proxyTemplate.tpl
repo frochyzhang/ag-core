@@ -16,7 +16,7 @@ type {{$ifcName}}Proxy struct {
 	handlers map[string]mw.HandlerFunc
 }
 
-func New{{$ifcName}}Proxy(service *{{$ifcName}}Service, mws []mw.Middleware) pb.{{$ifcName}}Server {
+func New{{$ifcName}}Proxy(service *{{$ifcName}}Service, mws []mw.PrioritizedMiddleware) pb.{{$ifcName}}Server {
 	proxy := &{{$ifcName}}Proxy{
 		service:     service,
 		handlers:    make(map[string]mw.HandlerFunc),
