@@ -18,12 +18,13 @@ import (
 )
 
 const (
-	contextPackage = protogen.GoImportPath("context")
-	serverPackage  = protogen.GoImportPath("github.com/cloudwego/hertz/pkg/app/server")
-	appPackage     = protogen.GoImportPath("github.com/cloudwego/hertz/pkg/app")
-	constsPackage  = protogen.GoImportPath("github.com/cloudwego/hertz/pkg/protocol/consts")
-	hertzPackage   = protogen.GoImportPath("github.com/frochyzhang/ag-core/ag/ag_server/hertz")
-	fxPackage      = protogen.GoImportPath("go.uber.org/fx")
+	contextPackage     = protogen.GoImportPath("context")
+	appPackage         = protogen.GoImportPath("github.com/cloudwego/hertz/pkg/app")
+	constsPackage      = protogen.GoImportPath("github.com/cloudwego/hertz/pkg/protocol/consts")
+	hertzServerPackage = protogen.GoImportPath("github.com/frochyzhang/ag-core/ag/ag_hertz/server")
+	hertzClientPackage = protogen.GoImportPath("github.com/frochyzhang/ag-core/ag/ag_hertz/client")
+	hertzConfigPackage = protogen.GoImportPath("github.com/cloudwego/hertz/pkg/common/config")
+	fxPackage          = protogen.GoImportPath("go.uber.org/fx")
 )
 
 var methodSets = make(map[string]int)
@@ -65,10 +66,11 @@ func generateFileContent(gen *protogen.Plugin, file *protogen.File, g *protogen.
 	switch t {
 	case "http":
 		g.P("var _ = ", appPackage.Ident("FS{}"))
-		g.P("var _ = ", serverPackage.Ident("Hertz{}"))
+		g.P("var _ = ", hertzServerPackage.Ident("Server{}"))
 		g.P("var _ = ", constsPackage.Ident("StatusOK"))
-		g.P("var _ = ", hertzPackage.Ident("Server{}"))
+		g.P("var _ = ", hertzClientPackage.Ident("Client{}"))
 		g.P("var _ = ", fxPackage.Ident("Self()"))
+		g.P("var _ = ", hertzConfigPackage.Ident("RequestOption{}"))
 		g.P()
 	}
 
@@ -223,6 +225,8 @@ func buildMethodDesc(g *protogen.GeneratedFile, m *protogen.Method, method, path
 	if comment != "" {
 		comment = "// " + m.GoName + strings.TrimPrefix(strings.TrimSuffix(comment, "\n"), "//")
 	}
+
+	pathVars := extractParamNames(path)
 	return &methodDesc{
 		Name:         m.GoName,
 		OriginalName: string(m.Desc.Name()),
@@ -231,6 +235,7 @@ func buildMethodDesc(g *protogen.GeneratedFile, m *protogen.Method, method, path
 		Reply:        g.QualifiedGoIdent(m.Output.GoIdent),
 		Comment:      comment,
 		Path:         path,
+		PathVars:     pathVars,
 		Method:       method,
 		HasVars:      len(vars) > 0,
 	}
@@ -266,6 +271,19 @@ func replacePath(name string, value string, path string) string {
 		)
 	}
 	return path
+}
+
+func extractParamNames(pattern string) []string {
+	re := regexp.MustCompile(`:(\w+)`)
+	matches := re.FindAllStringSubmatch(pattern, -1)
+
+	params := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if len(match) > 1 {
+			params = append(params, match[1])
+		}
+	}
+	return params
 }
 
 func lowerFirst(s string) string {
