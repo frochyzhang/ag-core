@@ -10,6 +10,8 @@ import (
 type Client struct {
 	nc      naming_client.INamingClient
 	hostUrl string
+	*cli
+	reqOpt []config.RequestOption
 }
 type ClientOption func(*Client)
 
@@ -25,29 +27,36 @@ func WithHostUrl(hostUrl string) ClientOption {
 	}
 }
 
-func NewClient(options []ClientOption) *Client {
+func NewClient(opts []ClientOption) *Client {
 	c := &Client{}
-	for _, opt := range options {
+	for _, opt := range opts {
 		opt(c)
 	}
+
+	options := make([]Option, 0)
+	if c.nc != nil {
+		options = append(options, withNamingClient(c.nc))
+		c.reqOpt = append(c.reqOpt, config.WithSD(true))
+	}
+
+	if c.hostUrl == "" {
+		panic(errors.New("hostUrl is empty"))
+	}
+
+	options = append(options, withHostUrl(c.hostUrl))
+
+	client, err := newClient(getOptions(options...))
+	if err != nil {
+		panic(err)
+	}
+	c.cli = client
+
 	return c
 }
 
 func (c *Client) Invoke(ctx context.Context, method, path string, pathVars map[string]string, args any, reply any, opts ...config.RequestOption) error {
-	var c1 *cli
-	options := make([]Option, 0)
-	if c.nc != nil {
-		options = append(options, withNamingClient(c.nc))
-		opts = append(opts, config.WithSD(true))
-	}
-
-	if c.hostUrl == "" {
-		return errors.New("hostUrl is empty")
-	}
-
-	options = append(options, withHostUrl(c.hostUrl))
-	c1, _ = newClient(getOptions(options...))
-	_, err := c1.r().
+	opts = append(c.reqOpt, opts...)
+	_, err := c.cli.r().
 		setContext(ctx).
 		setQueryParams(map[string]interface{}{}).
 		setPathParams(pathVars).
