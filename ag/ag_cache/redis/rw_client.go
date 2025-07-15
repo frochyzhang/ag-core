@@ -1,12 +1,12 @@
-package ag_redis
+package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"time"
 
-	"github.com/frochyzhang/ag-core/ag/ag_conf"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -22,13 +22,7 @@ type RWClient struct {
 }
 
 // NewRWClient 创建读写分离Redis客户端
-func NewRWClient(binder ag_conf.IBinder) (*RWClient, error) {
-	builder := NewRedisConfigBuilder(binder)
-	redisProps, err := builder.BuildConfig()
-	if err != nil {
-		return nil, fmt.Errorf("无法构建 Redis 配置: %w", err)
-	}
-
+func NewRWClient(redisProps *RedisProperties) (*RWClient, error) {
 	var master *redis.Client
 	slaves := make(map[string]*redis.Client)
 
@@ -87,7 +81,7 @@ func (c *RWClient) getRandomSlave() *redis.Client {
 
 // ====================== 写操作（使用主节点） ======================
 
-func (c *RWClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
+func (c *RWClient) Set(ctx context.Context, key string, value any, expiration time.Duration) *redis.StatusCmd {
 	return c.master.Set(ctx, key, value, expiration)
 }
 
@@ -95,7 +89,7 @@ func (c *RWClient) Del(ctx context.Context, keys ...string) *redis.IntCmd {
 	return c.master.Del(ctx, keys...)
 }
 
-func (c *RWClient) HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd {
+func (c *RWClient) HSet(ctx context.Context, key string, values ...any) *redis.IntCmd {
 	return c.master.HSet(ctx, key, values...)
 }
 
@@ -164,7 +158,7 @@ func (c *RWClient) Close() error {
 		for _, err := range slaveErrs {
 			errMsg += fmt.Sprintf("\n - %v", err)
 		}
-		return fmt.Errorf(errMsg)
+		return errors.New(errMsg)
 	}
 
 	return nil

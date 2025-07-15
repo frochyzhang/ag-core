@@ -1,10 +1,11 @@
-package ag_redis
+package redis
 
 import (
 	"fmt"
-	"github.com/frochyzhang/ag-core/ag/ag_conf"
 	"log"
 	"net"
+
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
 )
 
 const (
@@ -28,12 +29,6 @@ func NewRedisConfigBuilder(binder ag_conf.IBinder) *RedisConfigBuilder {
 	}
 }
 
-// ProvideRedisConfig 提供 Redis 配置
-func ProvideRedisConfig(binder ag_conf.IBinder) (*RedisProperties, error) {
-	builder := NewRedisConfigBuilder(binder)
-	return builder.BuildConfig()
-}
-
 // BuildConfig 构建 Redis 配置
 func (builder *RedisConfigBuilder) BuildConfig() (*RedisProperties, error) {
 	var redisProps RedisProperties
@@ -55,7 +50,7 @@ func (builder *RedisConfigBuilder) BuildConfig() (*RedisProperties, error) {
 // 验证单个节点
 func validateRedisNode(node *RedisNodeConfig) error {
 	if node == nil {
-		return fmt.Errorf("Redis 节点配置为空")
+		return fmt.Errorf("redis 节点配置为空")
 	}
 
 	// 验证地址格式

@@ -1,4 +1,4 @@
-package ag_redis
+package redis
 
 import (
 	"context"
