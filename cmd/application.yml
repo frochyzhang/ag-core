@@ -1,0 +1,29 @@
+redis:
+  - id: rw
+    type: r
+    host: 127.0.0.1
+    port: 6379
+    password: rwpass
+    timeout: 5000
+    shutdown-timeout: 60000
+    min-idle: 2
+    max-idle: 2
+    max-active: 2
+    max-wait: 30000
+    time-between-eviction-runs: 30000
+    minEvictableIdleTime: -1
+    numTestsPerEvictionRun: -1
+  - id: ro
+    type: w
+    host: 127.0.0.1
+    port: 6379
+    password: ropass
+    timeout: 5000
+    shutdown-timeout: 60000
+    min-idle: 2
+    max-idle: 2
+    max-active: 2
+    max-wait: 30000
+    time-between-eviction-runs: 30000
+    minEvictableIdleTime: -1
+    numTestsPerEvictionRun: -1
