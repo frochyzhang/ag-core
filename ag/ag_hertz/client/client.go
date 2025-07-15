@@ -5,9 +5,6 @@ import (
 	"errors"
 	"github.com/cloudwego/hertz/pkg/common/config"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
-	"time"
-
-	hertzclient "github.com/cloudwego/hertz/pkg/app/client"
 )
 
 type Client struct {
@@ -47,16 +44,6 @@ func NewClient(opts []ClientOption) *Client {
 	}
 
 	options = append(options, withHostUrl(c.hostUrl))
-
-	// Add connection pooling options
-	options = append(options, WithHertzClientOption(
-		hertzclient.WithDialTimeout(5*time.Second),
-		hertzclient.WithKeepAlive(true),
-		hertzclient.WithMaxConnDuration(time.Minute),
-		hertzclient.WithMaxConnWaitTimeout(5*time.Second),
-		hertzclient.WithMaxConnsPerHost(100),
-		hertzclient.WithMaxIdleConnDuration(90*time.Second),
-	))
 
 	client, err := newClient(getOptions(options...))
 	if err != nil {
