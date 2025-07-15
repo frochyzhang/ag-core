@@ -170,7 +170,9 @@ func (m *Module) execute() ([]byte, error) {
 
 	prefix = fmt.Sprintln(prefix, "// Generate time: ", time.DateTime)
 
-	tmpl, err := template.New("service-module").Parse(prefix + serviceModuleTemplate)
+	tmpl, err := template.New("service-module").Funcs(template.FuncMap{
+		"toLower": strings.ToLower,
+	}).Parse(prefix + serviceModuleTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -203,26 +205,5 @@ func (i *Interface) execute() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-//nolint:lll
-var serviceModuleTemplate = `
-package service
-
-import ({{ range .Packages }}
-	"{{.}}"
-	{{- end }}
-	"go.uber.org/fx"
-)
-
-var FxServiceModule = fx.Module("fx-service",
-	fx.Provide({{ range .Names }}
-		New{{ .Name }}Service,
-	{{- end }}
-	),{{ range .Names }}
-	fx.Provide(
-		fx.Annotate(
-			New{{ .Name }}Proxy,
-			fx.As(new({{ .Brief }}.{{ .Name }}Server)),
-		),
-	),{{- end }}
-)
-`
+//go:embed service.tpl
+var serviceModuleTemplate string

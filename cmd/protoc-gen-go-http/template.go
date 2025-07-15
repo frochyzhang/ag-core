@@ -31,6 +31,7 @@ type methodDesc struct {
 	Comment      string
 	// http_rule
 	Path         string
+	PathVars     []string
 	Method       string
 	HasVars      bool
 	HasBody      bool
