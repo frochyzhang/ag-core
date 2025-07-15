@@ -17,7 +17,7 @@ import (
 var CmdClient = &cobra.Command{
 	Use:   "client",
 	Short: "Generate the proto client code",
-	Long:  "Generate the proto client code. Example: kratos proto client helloworld.proto",
+	Long:  "Generate the proto client code. Example: aif-go proto client helloworld.proto",
 	Run:   run,
 }
 
@@ -40,8 +40,8 @@ func run(_ *cobra.Command, args []string) {
 		proto = strings.TrimSpace(args[0])
 	)
 	if err = look("protoc-gen-go", "protoc-gen-go-grpc", "protoc-gen-go-http", "protoc-gen-go-errors", "protoc-gen-openapi"); err != nil {
-		// update the kratos plugins
-		cmd := exec.Command("kratos", "upgrade")
+		// update the aif-go plugins
+		cmd := exec.Command("aif-go", "upgrade")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err = cmd.Run(); err != nil {
