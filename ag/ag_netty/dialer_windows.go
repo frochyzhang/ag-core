@@ -1,8 +1,11 @@
+//go:build windows
+// +build windows
+
 package ag_netty
 
 import (
-	"github.com/cloudwego/netpoll"
 	"log/slog"
+	"net"
 	"time"
 )
 
@@ -15,62 +18,56 @@ func Dial(
 	idleTimeout time.Duration,
 	looper EventLooper,
 ) (*Channel, error) {
-	conn, err := netpoll.DialConnection("tcp", addr, connTimeout)
+	netConn, err := net.DialTimeout("tcp", addr, connTimeout)
 	if err != nil {
 		return nil, err
 	}
 
-	// 创建通道
+	if readTimeout > 0 {
+		netConn.SetReadDeadline(time.Now().Add(readTimeout))
+	}
+	if writeTimeout > 0 {
+		netConn.SetWriteDeadline(time.Now().Add(writeTimeout))
+	}
+
+	conn := NewNetConnAdapter(netConn)
+
 	channel := NewChannel(conn, looper)
 
-	// 初始化Pipeline
 	if clientLooper, ok := looper.(*ClientEventLoop); ok {
 		if clientLooper.initFunc != nil {
 			clientLooper.initFunc(channel)
 		}
 	}
 
-	// 触发激活事件
 	looper.Post(func() {
 		channel.Pipeline.FireActive()
 	})
 
-	// 设置读超时
-	conn.SetReadTimeout(readTimeout)
-	// 设置写超时
-	conn.SetWriteTimeout(writeTimeout)
-	// 设置空闲超时
-	conn.SetIdleTimeout(idleTimeout)
-
-	// 启动读循环
-	go readLoop(conn, channel, looper)
+	go readLoopForNetConn(netConn, channel, looper, readTimeout, idleTimeout)
 
 	slog.Info("Connected to server", "addr", addr)
 	return channel, nil
 }
 
-// readLoop 读取数据循环
-func readLoop(
-	conn netpoll.Connection,
+func readLoopForNetConn(
+	conn net.Conn,
 	channel *Channel,
 	looper EventLooper,
+	readTimeout time.Duration,
+	idleTimeout time.Duration,
 ) {
-	reader := conn.Reader()
+	buffer := make([]byte, 4096)
 	for {
 		if looper.IsShutdown() {
 			return
 		}
 
-		// 检查可读数据
-		n := reader.Len()
-
-		if n == 0 {
-			time.Sleep(10 * time.Millisecond)
-			continue
+		if readTimeout > 0 {
+			conn.SetReadDeadline(time.Now().Add(readTimeout))
 		}
 
-		// 读取数据
-		data, err := reader.ReadBinary(n)
+		n, err := conn.Read(buffer)
 		if err != nil {
 			looper.Post(func() {
 				channel.Pipeline.FireError(err)
@@ -79,9 +76,15 @@ func readLoop(
 			return
 		}
 
-		// 触发读事件
-		looper.Post(func() {
-			channel.Pipeline.FireRead(data)
-		})
+		if n > 0 {
+			data := make([]byte, n)
+			copy(data, buffer[:n])
+
+			looper.Post(func() {
+				channel.Pipeline.FireRead(data)
+			})
+		} else {
+			time.Sleep(10 * time.Millisecond)
+		}
 	}
 }
