@@ -1,4 +1,4 @@
-package ag_nacos
+package test
 
 import (
 	"encoding/json"
@@ -6,12 +6,14 @@ import (
 	"github.com/frochyzhang/ag-core/ag/ag_conf"
 	"github.com/frochyzhang/ag-core/ag/ag_conf/reader/yaml"
 	"github.com/frochyzhang/ag-core/ag/ag_ext"
+	"github.com/frochyzhang/ag-core/ag/ag_nacos/config"
+	"github.com/frochyzhang/ag-core/ag/ag_nacos/naming"
 	"os"
 	"testing"
 )
 
 func TestNacosPropertiesBind(t *testing.T) {
-	context, err := os.ReadFile("./testdata/nacos_properties.yml")
+	context, err := os.ReadFile("nacos_properties.yml")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,13 +37,11 @@ func TestNacosPropertiesBind(t *testing.T) {
 
 	binder := ag_conf.NewConfigurationPropertiesBinder(env)
 
-	nacosProperties := &NacosConfigProperties{}
+	np, _ := naming.NewNacosNamingProperties(binder)
+	jstr, _ := json.MarshalIndent(np, "", " ")
+	fmt.Printf("np:%s\n", jstr)
 
-	err = binder.Bind(nacosProperties, NacosConfigPropertiesPrefix)
-	if err != nil {
-		t.Fatal(err)
-	}
-	jstr, err := json.MarshalIndent(nacosProperties, "", " ")
-	fmt.Printf("err:%v %s", err, jstr)
-
+	cp, _ := config.NewNacosConfigProperties(binder)
+	jstr, _ = json.MarshalIndent(cp, "", " ")
+	fmt.Printf("cp:%s\n", jstr)
 }

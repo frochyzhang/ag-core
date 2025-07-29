@@ -1,4 +1,4 @@
-package ag_nacos
+package common
 
 import (
 	"github.com/frochyzhang/ag-core/ag/ag_conf"
@@ -51,23 +51,23 @@ func TestParseIPPort(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		want    []ipPort
+		want    []IpPort
 		wantErr bool
 	}{
 		{
 			name:  "单个IP和端口",
 			input: "192.168.1.1:8080",
-			want: []ipPort{
-				{ip: "192.168.1.1", port: 8080},
+			want: []IpPort{
+				{Ip: "192.168.1.1", Port: 8080},
 			},
 			wantErr: false,
 		},
 		{
 			name:  "多个IP和端口",
 			input: "192.168.1.1:8080, 10.0.0.1:8848",
-			want: []ipPort{
-				{ip: "192.168.1.1", port: 8080},
-				{ip: "10.0.0.1", port: 8848},
+			want: []IpPort{
+				{Ip: "192.168.1.1", Port: 8080},
+				{Ip: "10.0.0.1", Port: 8848},
 			},
 			wantErr: false,
 		},
@@ -86,18 +86,18 @@ func TestParseIPPort(t *testing.T) {
 		{
 			name:  "单个IP",
 			input: "192.168.1.1",
-			want: []ipPort{
-				{ip: "192.168.1.1", port: 8848},
+			want: []IpPort{
+				{Ip: "192.168.1.1", Port: 8848},
 			},
 			wantErr: false,
 		},
 		{
 			name:  "多个IP",
 			input: "192.168.1.1, 10.0.0.1,3.3.3.3",
-			want: []ipPort{
-				{ip: "192.168.1.1", port: 8848},
-				{ip: "10.0.0.1", port: 8848},
-				{ip: "3.3.3.3", port: 8848},
+			want: []IpPort{
+				{Ip: "192.168.1.1", Port: 8848},
+				{Ip: "10.0.0.1", Port: 8848},
+				{Ip: "3.3.3.3", Port: 8848},
 			},
 			wantErr: false,
 		},
@@ -106,7 +106,7 @@ func TestParseIPPort(t *testing.T) {
 	// 遍历测试用例
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseIPPort(tt.input)
+			got, err := ParseIPPort(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseIPPort() 错误 = %v, 期望错误 = %v", err, tt.wantErr)
 				return
@@ -119,7 +119,7 @@ func TestParseIPPort(t *testing.T) {
 }
 
 // 辅助函数，用于比较两个ipPort切片是否相等
-func equal(a, b []ipPort) bool {
+func equal(a, b []IpPort) bool {
 	if len(a) != len(b) {
 		return false
 	}

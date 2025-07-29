@@ -4,18 +4,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/route"
-	"github.com/frochyzhang/ag-core/ag/ag_conf"
-	"github.com/frochyzhang/ag-core/ag/ag_ext/ip"
-	"log/slog"
-	"net"
-	"time"
-
 	"github.com/cloudwego/hertz/pkg/app/server"
 	"github.com/cloudwego/hertz/pkg/app/server/registry"
 	"github.com/cloudwego/hertz/pkg/common/config"
+	"github.com/cloudwego/hertz/pkg/route"
+	"github.com/frochyzhang/ag-core/ag/ag_conf"
+	"github.com/frochyzhang/ag-core/ag/ag_ext/ip"
 	"github.com/hertz-contrib/registry/nacos"
 	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
+	"log/slog"
+	"net"
 )
 
 type Route struct {
@@ -78,16 +76,7 @@ func (s *Server) Start(context.Context) error {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	s.logger.Info("Shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := s.Hertz.Shutdown(ctx); err != nil {
-		s.logger.Error("Failed to shutdown hertz server", "error", err)
-	}
-
-	s.logger.Info("Shutting down hertz server...")
-	return nil
+	return s.Hertz.Shutdown(ctx)
 }
 
 // HertzOptionSuite 定义了Hertz服务的配置套件
@@ -149,23 +138,20 @@ func (builder *HertzSuiteBuilder) BuildSuite() (*HertzOptionSuite, error) {
 
 		regInfo := &registry.Info{}
 		regInfo.Weight = 1
-		// 服务ip范围配置
-		if hconf.EnableIPRange != "" {
-			ipranger, err := ip.NewIPRanger(hconf.EnableIPRange)
-			if err != nil {
-				return nil, err
-			}
+		ipranger, err := ip.NewIPRanger(hconf.EnableIPRange)
+		if err != nil {
+			return nil, err
+		}
 
-			host, ok, err := ipranger.GetLocalIP()
+		host, ok, err := ipranger.GetLocalIP()
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			slog.Info("hertz server enable ip range", "regAddr", fmt.Sprintf("%s:%d", host, port))
+			regInfo.Addr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
 			if err != nil {
 				return nil, err
-			}
-			if ok {
-				slog.Info("hertz server enable ip range", "regAddr", fmt.Sprintf("%s:%d", host, port))
-				regInfo.Addr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", host, port))
-				if err != nil {
-					return nil, err
-				}
 			}
 		}
 
