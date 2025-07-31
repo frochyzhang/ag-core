@@ -10,6 +10,7 @@ require (
 	github.com/cloudwego/netpoll v0.7.1
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/hertz-contrib/http2 v0.1.8
 	github.com/hertz-contrib/registry/nacos v0.0.0-20250319055937-8a220332e808
 	github.com/kitex-contrib/registry-nacos v0.1.3
 	github.com/magiconair/properties v1.8.10

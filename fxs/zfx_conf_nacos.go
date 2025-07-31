@@ -7,7 +7,7 @@ import (
 	"go.uber.org/fx"
 )
 
-var FxConfNacoMode = fx.Module(
+var FxNacosConfigMode = fx.Module(
 	"fx_conf_nacos",
 	fx.Provide(
 		config.NewNacosConfigProperties,
