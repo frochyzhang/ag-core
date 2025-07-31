@@ -22,8 +22,5 @@ type HertzServerProperties struct {
 func NewHertzServerProperties(binder ag_conf.IBinder) (*HertzServerProperties, error) {
 	p := &HertzServerProperties{}
 	err := binder.Bind(p, hertzServerPropertiesPrefix)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
+	return p, err
 }
