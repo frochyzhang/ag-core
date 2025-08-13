@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/spf13/cast"
 )
 
 const (
@@ -135,6 +134,7 @@ func (cpb *ConfigurationPropertiesBinder) BindValue(bctx context.Context, v refl
 	}
 	// 检查Value的类型范围，只允许指定范围的类型
 	if !IsBindableType(v.Type()) { // 此处的判断要保障下面代码的正确性
+		slog.Error("bind value error", "key", param.Key, "type", v.Type().String(), "err", ErrUnBindableType)
 		return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), ErrUnBindableType)
 	}
 
@@ -212,7 +212,12 @@ func (cpb *ConfigurationPropertiesBinder) bindStruct(bctx context.Context, v ref
 			// ft.Name 转小写
 			// fname := strings.ToLower(ft.Name)
 			fname := ft.Name
-			subParam.Key = fmt.Sprintf("%s.%s", param.Key, fname)
+			// 若param.Key为空，则使用字段名称作为key
+			if param.Key == "" {
+				subParam.Key = fname
+			} else {
+				subParam.Key = fmt.Sprintf("%s.%s", param.Key, fname)
+			}
 		}
 		// {
 		// 	// 若没有配置value标签，则使用字段名称作为key
@@ -233,15 +238,14 @@ func (cpb *ConfigurationPropertiesBinder) bindStruct(bctx context.Context, v ref
 }
 
 func (cpb *ConfigurationPropertiesBinder) bindSlice(bctx context.Context, v reflect.Value, param BindParam) error {
-	// TODO 如果为直接属性 且 param autorefresh 添加自动参数刷新
-	// vsetfunc := func() {
-	// 	vsctx := context.WithValue(context.Background(), "canautorefresh", false)
-	// 	cpb.bindSlice(vsctx, v, param)
-	// }
-
 	t := v.Type()
 
 	et := t.Elem() // 获取切片元素类型，若t不是Array, Chan, Map, Pointer, Slice类型，会panic
+	// et 可能是个指针类型
+	if et.Kind() == reflect.Pointer { // 切片的子元素不能是指针
+		return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), ErrUnBindableType)
+		// et = et.Elem()
+	}
 	// fmt.Printf("%v\n", et.Kind())
 
 	// 创建指定类型的新切片
@@ -249,14 +253,6 @@ func (cpb *ConfigurationPropertiesBinder) bindSlice(bctx context.Context, v refl
 	defer func() {
 		v.Set(slice)
 	}() // 当函数返回时，将切片设置为值 v
-	// ============ TEST ==========
-
-	// for i := 0; i < 5; i++ {
-	// 	ev := reflect.New(et).Elem()
-	// 	ev.FieldByName("String").SetString(fmt.Sprintf("value-%d", i))
-	// 	slice = reflect.Append(slice, ev)
-	// }
-	// ============ TEST END =======
 
 	for i := 0; ; i++ {
 		ev := reflect.New(et).Elem()
@@ -264,20 +260,12 @@ func (cpb *ConfigurationPropertiesBinder) bindSlice(bctx context.Context, v refl
 			Key:  fmt.Sprintf("%s[%d]", param.Key, i),
 			Path: fmt.Sprintf("%s[%d]", param.Path, i),
 		}
-		// subParam.BindTag("tag string", "")
-
-		// TODO 判断下标不存在则中断循环
-		// if !cpb.env.ContainsProperty(subParam.Key) { // TODO 暂未实现a.b[0].c:123 情况的判断
 		if !cpb.containsDescendantOfName(subParam.Key) {
 			break
 		}
-		err := cpb.BindValue(bctx, ev, subParam) // TODO 待优化
-		// if errors.Is(err, ErrNotExist) {   // 按此处未找到判断，不严谨，若切片类型为struct，配置时，某个元素的属性确实没配置，此处存在误处理的情况
-		// 	break
-		// }
+		err := cpb.BindValue(bctx, ev, subParam)
 		if err != nil {
 			return fmt.Errorf("bind path=%s type=%s error << %w", param.Path, v.Type().String(), err)
-			// return errutil.WrapError(err, "bind path=%s type=%s error", param.Path, v.Type().String())
 		}
 		slice = reflect.Append(slice, ev)
 	}
@@ -285,6 +273,7 @@ func (cpb *ConfigurationPropertiesBinder) bindSlice(bctx context.Context, v refl
 }
 
 func (cpb *ConfigurationPropertiesBinder) bindMap(bctx context.Context, v reflect.Value, param BindParam) error {
+	// map 类型的默认值不允许有非空的默认值
 	if param.PTag.HasDef && param.PTag.Def != "" {
 		err := errors.New("map can't have a non-empty default value")
 		return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
@@ -295,13 +284,6 @@ func (cpb *ConfigurationPropertiesBinder) bindMap(bctx context.Context, v reflec
 	ret := reflect.MakeMap(t)
 	defer func() { v.Set(ret) }()
 
-	if param.PTag.Key == "" {
-		if param.PTag.HasDef {
-			return nil
-		}
-		return fmt.Errorf("tag for %s requires a default value", param.Path)
-	}
-
 	// if !cpb.env.ContainsProperty(param.Key) {
 	if !cpb.containsDescendantOfName(param.Key) {
 		if param.PTag.HasDef {
@@ -311,50 +293,46 @@ func (cpb *ConfigurationPropertiesBinder) bindMap(bctx context.Context, v reflec
 	}
 
 	// 1. 获取所有子键
-	// keys := cpb.getDescendantKeysOfName(param.Key)
-	keys := cpb.getDescendantSubKeysOfName(param.Key)
-	// keys := make([]string, 0)
-	// keys = append(keys, "hzw1")
-	// keys = append(keys, "hzw2")
-	// keys, err := p.SubKeys(param.Key)
-	// if err != nil {
-	// 	return errutil.WrapError(err, "bind path=%s type=%s error", param.Path, v.Type().String())
-	// }
+	subKeys := cpb.getDescendantSubKeysOfName(param.Key)
 
 	// 2. 遍历子键，构建子value
-	for _, key := range keys {
+	for _, subKey := range subKeys {
 		e := reflect.New(et).Elem()
-		subKey := key
-		if param.Key != "" {
-			subKey = param.Key + "." + key
+		key := param.Key
+		if key != "" {
+			key = param.Key + "." + subKey
 		}
 		subParam := BindParam{
-			Key:  subKey,
+			Key:  key,
 			Path: param.Path,
 		}
 		if err := cpb.BindValue(bctx, e, subParam); err != nil {
 			return err
 		}
 
-		// if err = BindValue(p, e, et, subParam, filter); err != nil {
-		// 	return err // no wrap
-		// }
-		ret.SetMapIndex(reflect.ValueOf(key), e)
+		ret.SetMapIndex(reflect.ValueOf(subKey), e)
 	}
 	return nil
 
 }
 
+// containsDescendantOfName 检查是否包含后代键
+// 子键检查包含切片类型key
 func (cpb *ConfigurationPropertiesBinder) containsDescendantOfName(name string) bool {
 	found := false
 	prefix := name + "."
+	prefix2 := name + "[" // 切片类型
 
-	// cpb.propertySources.RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
+	isArray := isArryKey(name)
+
 	cpb.env.GetPropertySources().RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
 		// 检查属性源内容是否包含后代
 		source := ps.GetSource()
 		for k := range source {
-			if k == name || strings.HasPrefix(k, prefix) {
+			// if k == name || strings.HasPrefix(k, prefix) {
+			if strings.EqualFold(k, name) || // 完全匹配
+				hasPrefixIgnoreCase(k, prefix) || // .前缀匹配
+				(isArray && hasPrefixIgnoreCase(k, prefix2)) {
 				found = true
 				return true, nil
 			}
@@ -365,15 +343,23 @@ func (cpb *ConfigurationPropertiesBinder) containsDescendantOfName(name string) 
 	return found
 }
 
+func isArryKey(key string) bool {
+	// 正则表达式匹配
+	pattern := `^.+\[\d+\]$`
+	re := regexp.MustCompile(pattern)
+	return re.MatchString(key)
+}
+
+// getDescendantKeysOfName 获取所有后代键，包含自身
+// FIXME: 此处目前只有bindMap使用，暂不考虑slice的子键解析，slice在bindSlice中自行处理
 func (cpb *ConfigurationPropertiesBinder) getDescendantKeysOfName(name string) []string {
 	dkeys := []string{}
 	prefix := name + "."
-	// cpb.propertySources.RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
 	cpb.env.GetPropertySources().RangePropertySourceHandler(func(ps IPropertySource) (end bool, err error) {
 		// 检查属性源内容是否包含后代
 		source := ps.GetSource()
 		for k := range source {
-			if k == name || strings.HasPrefix(k, prefix) {
+			if k == name || hasPrefixIgnoreCase(k, prefix) {
 				dkeys = append(dkeys, k)
 			}
 		}
@@ -384,25 +370,59 @@ func (cpb *ConfigurationPropertiesBinder) getDescendantKeysOfName(name string) [
 	return dkeys
 }
 
+// getDescendantSubKeysOfName 获取所有后代子键
 func (cpb *ConfigurationPropertiesBinder) getDescendantSubKeysOfName(name string) []string {
+	// 获取包含name的所有键
 	keys := cpb.getDescendantKeysOfName(name)
+	// 解析所有键的name子键
+	return getDescendantSubKeysOfName(name, keys)
+}
+
+// getDescendantSubKeysOfName 获取所有后代子键
+// FIXME: 此处目前只有bindMap使用，暂不考虑slice的子键解析，slice在bindSlice中自行处理
+// FIXME: bindMap情况下不存在子键起始为[的情况==
+func getDescendantSubKeysOfName(name string, keys []string) []string {
 	subKeys := make([]string, 0, len(keys))
 	prefix := name
-	if prefix != "" {
+	if name != "" {
 		prefix += "."
 	}
 
 	seen := make(map[string]bool)
 	for _, k := range keys {
-		if k == name {
+		if k == name { // 自身没有子键，跳过
 			continue
 		}
-		subKey := strings.TrimPrefix(k, prefix)
-		// 只取第一级子键
-		if dot := strings.Index(subKey, "."); dot > 0 {
-			subKey = subKey[:dot]
+
+		var subKey string
+		if hasPrefixIgnoreCase(k, prefix) {
+			subKey = trimPrefixIgnoreCase(k, prefix)
+		} else {
+			continue
 		}
-		if !seen[subKey] {
+
+		// 截取有效子键
+		// 处理子健 1. 点分隔的情况 2.数组索引情况
+		// .的索引位置
+		dotIndex := strings.Index(subKey, ".") // 子键是key的情况
+		// 第一个中括号的位置
+		bracketIndex := strings.Index(subKey, "[") // 子键是数组的情况
+
+		// 找到最小的有效索引
+		minIndex := len(subKey)
+		if dotIndex > 0 && dotIndex < minIndex {
+			minIndex = dotIndex
+		}
+		if bracketIndex > 0 && bracketIndex < minIndex {
+			minIndex = bracketIndex
+		}
+
+		// 如果找到有效索引则截取，否则保持原字符串
+		if minIndex < len(subKey) {
+			subKey = subKey[:minIndex]
+		}
+
+		if subKey != "" && !seen[subKey] { // 扁平的map，可能包含多个子键情况，如：[a.b.c, a.b.d] 对于a来说只有个子键：b
 			seen[subKey] = true
 			subKeys = append(subKeys, subKey)
 		}
@@ -564,6 +584,7 @@ func ParseTag(tag string) (ret ParsedTag, err error) {
 // 	return strings.TrimSpace(content), "", false, nil
 // }
 
+// IsBindableType 判断类型是否可绑定
 func IsBindableType(t reflect.Type) bool {
 	switch t.Kind() {
 	case reflect.Map, reflect.Slice:
@@ -590,14 +611,17 @@ func IsBindableType(t reflect.Type) bool {
 		return true
 	case reflect.Struct:
 		return true
+	case reflect.Map, reflect.Slice: // 集合元素可以是集合
+		return true
 	case reflect.Pointer:
-		// return IsBindableType(t.Elem()) // TODO 是否允许集合元素为指针类型
+		// return IsBindableType(t.Elem()) // FIXME 是否允许集合元素为指针类型，当前不支持
 		return false
 	default:
 		return false
 	}
 }
 
+// doBindValue 绑定配置值到目标结构体字段
 func (cpb *ConfigurationPropertiesBinder) doBindValue(ctx context.Context, env IConfigurableEnvironment, v reflect.Value, param BindParam) error {
 	// 需要获取参数的类型
 	value := env.GetProperty(param.Key) // TODO value中的占位符按设计需要在env中完成解析，是否需要在此处处理？
@@ -614,53 +638,110 @@ func (cpb *ConfigurationPropertiesBinder) doBindValue(ctx context.Context, env I
 		}
 	}
 	// TODO 默认值可能也有占位符 默认值暂不支持占位符
+	return parseValue(value, v, param)
+}
 
-	// 将string 类型的value，按照reflect.Value的类型进行转换，并赋值给v
-	switch v.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		// 解析为int类型
-		if i, err := strconv.ParseInt(value, 0, 0); err == nil {
-			v.SetInt(i)
-			return nil
-		} else {
-			return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
-		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		// 解析为uint类型
-		if i, err := strconv.ParseUint(value, 0, 0); err == nil {
-			v.SetUint(i)
-			return nil
-		} else {
-			return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
-		}
-	case reflect.Float32, reflect.Float64:
-		// 解析为float类型
-		if f, err := strconv.ParseFloat(value, 0); err == nil {
-			v.SetFloat(f)
-			return nil
-		} else {
-			return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
-		}
-
-	case reflect.Bool:
-		// 解析为bool类型
-		if b, err := cast.ToBoolE(value); err == nil {
-			// if b, err := strconv.ParseBool(value); err == nil { // TODO
-			v.SetBool(b)
-			return nil
-		} else {
-			return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
-		}
-	case reflect.String:
-		// 解析为string类型
-		v.SetString(value)
-		return nil
-	default:
-		// 其他类型无法解析
-		// err := errors.New("unsupported type")
-		err := ErrUnsupportedType
-		return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
-
+// parseValue 将string类型的value按照reflect.Value的类型进行转换，并赋值给v
+func parseValue(value string, v reflect.Value, param BindParam) error {
+	// 检查目标值是否可设置，避免panic
+	if !v.CanSet() {
+		return fmt.Errorf("bind path=%s type=%s error: value is not settable", param.Path, v.Type().String())
 	}
 
+	// 封装错误处理，减少重复代码
+	wrapError := func(err error) error {
+		return fmt.Errorf("bind path=%s type=%s error: %w", param.Path, v.Type().String(), err)
+	}
+
+	switch v.Kind() {
+	case reflect.Int:
+		i, err := strconv.ParseInt(value, 0, 64) // int位数与平台相关，用64兼容大部分场景
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetInt(i)
+	case reflect.Int8:
+		i, err := strconv.ParseInt(value, 0, 8)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetInt(i)
+	case reflect.Int16:
+		i, err := strconv.ParseInt(value, 0, 16)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetInt(i)
+	case reflect.Int32:
+		i, err := strconv.ParseInt(value, 0, 32)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetInt(i)
+	case reflect.Int64:
+		i, err := strconv.ParseInt(value, 0, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetInt(i)
+
+	case reflect.Uint:
+		i, err := strconv.ParseUint(value, 0, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetUint(i)
+	case reflect.Uint8:
+		i, err := strconv.ParseUint(value, 0, 8)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetUint(i)
+	case reflect.Uint16:
+		i, err := strconv.ParseUint(value, 0, 16)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetUint(i)
+	case reflect.Uint32:
+		i, err := strconv.ParseUint(value, 0, 32)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetUint(i)
+	case reflect.Uint64:
+		i, err := strconv.ParseUint(value, 0, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetUint(i)
+
+	case reflect.Float32:
+		f, err := strconv.ParseFloat(value, 32)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetFloat(f)
+	case reflect.Float64:
+		f, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetFloat(f)
+
+	case reflect.Bool:
+		b, err := strconv.ParseBool(value)
+		if err != nil {
+			return wrapError(err)
+		}
+		v.SetBool(b)
+
+	case reflect.String:
+		v.SetString(value)
+
+	default:
+		return wrapError(ErrUnsupportedType)
+	}
+
+	return nil
 }

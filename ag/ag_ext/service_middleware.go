@@ -2,7 +2,7 @@ package ag_ext
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sort"
 	"time"
 )
@@ -82,14 +82,14 @@ func loggingMiddleware(
 	next func(context.Context, interface{}) (interface{}, error),
 ) (interface{}, error) {
 	start := time.Now()
-	log.Printf("[%s] request received", method)
+	slog.Info("request received.", "method", method)
 
 	res, err := next(ctx, req)
 
 	if err != nil {
-		log.Printf("[%s] failed in %v: %v", method, time.Since(start), err)
+		slog.Error("failed to handle request!", "method", method, "error", err, "duration", time.Since(start))
 	} else {
-		log.Printf("[%s] completed in %v", method, time.Since(start))
+		slog.Info("request handled completed!", "method", method, "duration", time.Since(start))
 	}
 	return res, err
 }
