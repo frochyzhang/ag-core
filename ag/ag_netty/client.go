@@ -5,9 +5,8 @@ import (
 	"time"
 )
 
-// Client 客户端
 type Client struct {
-	eventLoop      *ClientEventLoop
+	eventLoop      *EventLoop
 	channel        *Channel
 	initFunc       func(ch *Channel)
 	addr           string
@@ -15,10 +14,10 @@ type Client struct {
 	readTimeout    time.Duration
 	writeTimeout   time.Duration
 	idleTimeout    time.Duration
+	tlsConfig      *TLSConfig
 	mu             sync.Mutex
 }
 
-// NewClient 创建新客户端
 func NewClient(
 	addr string,
 	connectTimeout time.Duration,
@@ -37,23 +36,34 @@ func NewClient(
 	}
 }
 
-// Connect 连接到服务器
+func (c *Client) SetTLSConfig(cfg *TLSConfig) {
+	c.tlsConfig = cfg
+}
+
 func (c *Client) Connect() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if c.eventLoop != nil {
-		return nil // 已连接
+		return nil
 	}
 
-	// 创建事件循环
-	eventLoop := NewClientEventLoop(c.initFunc)
+	eventLoop := NewEventLoop()
 	c.eventLoop = eventLoop
 
-	// 建立连接
-	channel, err := Dial(c.addr, c.connectTimeout, c.readTimeout, c.writeTimeout, c.idleTimeout, eventLoop)
+	channel, err := Dial(
+		c.addr,
+		c.connectTimeout,
+		c.readTimeout,
+		c.writeTimeout,
+		c.idleTimeout,
+		eventLoop,
+		c.initFunc,
+		c.tlsConfig,
+	)
 	if err != nil {
 		eventLoop.Shutdown()
+		c.eventLoop = nil
 		return err
 	}
 
@@ -61,32 +71,33 @@ func (c *Client) Connect() error {
 	return nil
 }
 
-// Channel 获取通道
 func (c *Client) Channel() *Channel {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.channel
 }
 
-// Close 关闭客户端
 func (c *Client) Close() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.channel != nil {
+		c.channel.Close()
+		c.channel = nil
+	}
+
 	if c.eventLoop != nil {
 		c.eventLoop.Shutdown()
-		//c.eventLoop = nil
-		//c.channel = nil
-		c.channel.Close()
+		c.eventLoop = nil
 	}
 }
 
 func (c *Client) Send(data []byte) {
 	c.Channel().Write(data)
 }
+
+// SendAndGet 发送数据并等待响应。调用方负责管理 Client 生命周期（调用 Close）。
 func (c *Client) SendAndGet(data []byte) (any, error) {
 	future := c.Channel().WriteAsync(data)
-	defer c.Close()
-	ret, err := future.GetWithTimeout(c.readTimeout)
-	return ret, err
+	return future.GetWithTimeout(c.readTimeout)
 }

@@ -18,7 +18,6 @@ type Server struct {
 }
 type Option func(s *Server)
 
-// func NewHelloServer(engine *gin.Engine, logger *log.Logger, opts ...Option) *Server {
 func NewHelloServer(
 	suite *client.NettyOptionSuite,
 	logger *slog.Logger,
@@ -36,25 +35,28 @@ func (s *Server) Start(ctx context.Context) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// 打印r中所有的head
 		for k, v := range r.Header {
 			fmt.Printf("%s:%s\n", k, v)
 		}
 
 		body := r.Body
-		// 读取body内容
 		buf := make([]byte, 2048)
 		n, _ := body.Read(buf)
 
 		clientWithSuite := client.NewNettyClientWithSuite(s.suite, s.logger)
 		err2 := clientWithSuite.Connect()
 		if err2 != nil {
-			panic(err2)
+			slog.Error("netty client connect failed", "error", err2)
+			http.Error(w, "connect failed", http.StatusInternalServerError)
+			return
 		}
+		defer clientWithSuite.Close()
+
 		_, err2 = clientWithSuite.SendAndGet(buf[:n])
 		if err2 != nil {
-			println("err2", err2.(error).Error())
-			panic(err2)
+			slog.Error("netty client sendAndGet failed", "error", err2)
+			http.Error(w, "send failed", http.StatusInternalServerError)
+			return
 		}
 
 		bbuf := buf[:n]
@@ -77,22 +79,17 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	if err := s.httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		// log.Fatalf("listen: %s\n", err)
-		// slog.Error("hello server", "err", err)
 		slog.Info("hello server", "err", err)
 		return err
 	}
 	return nil
 }
+
 func (s *Server) Stop(ctx context.Context) error {
 	slog.Info("Shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	if err := s.httpSrv.Shutdown(ctx); err != nil {
-		slog.Error("Server forced to shutdown: ", err)
+		slog.Error("Server forced to shutdown", "error", err)
 	}
-
 	slog.Info("Server exiting")
 	return nil
 }

@@ -8,9 +8,10 @@ import (
 
 // Future 异步操作结果
 type Future struct {
-	done   chan struct{}
-	result interface{}
-	mu     sync.Mutex
+	done      chan struct{}
+	result    interface{}
+	mu        sync.Mutex
+	completed bool
 }
 
 // NewFuture 创建新Future
@@ -23,10 +24,11 @@ func (f *Future) Complete(result interface{}) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	if f.done == nil {
+	if f.completed {
 		return
 	}
 
+	f.completed = true
 	f.result = result
 	close(f.done)
 }

@@ -9,8 +9,9 @@ import (
 // Channel 网络通道
 type Channel struct {
 	conn      Connection
-	looper    EventLooper // 使用接口类型
+	looper    EventLooper
 	Pipeline  *Pipeline
+	mu        sync.RWMutex // protects active flag and future
 	active    bool
 	closeOnce sync.Once
 	future    *Future
@@ -28,13 +29,18 @@ func NewChannel(conn Connection, looper EventLooper) *Channel {
 }
 
 func (c *Channel) Future() *Future {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.future
 }
 
 // Write 写数据
 func (c *Channel) Write(data []byte) {
 	c.looper.Post(func() {
-		if c.active {
+		c.mu.RLock()
+		active := c.active
+		c.mu.RUnlock()
+		if active {
 			c.Pipeline.FireWrite(data)
 		}
 	})
@@ -42,7 +48,10 @@ func (c *Channel) Write(data []byte) {
 
 // WriteDirect 直接写数据（无流水线处理）
 func (c *Channel) WriteDirect(data []byte) error {
-	if !c.active {
+	c.mu.RLock()
+	active := c.active
+	c.mu.RUnlock()
+	if !active {
 		return io.ErrClosedPipe
 	}
 	_, err := c.conn.Write(data)
@@ -52,28 +61,33 @@ func (c *Channel) WriteDirect(data []byte) error {
 // WriteAsync 异步写数据
 func (c *Channel) WriteAsync(data []byte) *Future {
 	future := NewFuture()
+	c.mu.Lock()
+	c.future = future
+	c.mu.Unlock()
+
 	c.looper.Post(func() {
-		if c.active {
+		c.mu.RLock()
+		active := c.active
+		c.mu.RUnlock()
+		if active {
 			c.Pipeline.FireWrite(data)
-			//future.Complete(nil)
+			// future is completed by response handler via ctx.Channel().Future().Complete()
 		} else {
 			future.Complete(io.ErrClosedPipe)
 		}
 	})
-	c.future = future
 	return future
 }
 
 // Close 关闭通道
 func (c *Channel) Close() {
 	c.closeOnce.Do(func() {
-		//c.looper.Post(func() {
-		if c.active {
-			c.active = false
-			c.conn.Close()
-			c.Pipeline.FireInactive()
-		}
-		//})
+		c.mu.Lock()
+		c.active = false
+		c.mu.Unlock()
+
+		c.conn.Close()
+		c.Pipeline.FireInactive()
 	})
 }
 
@@ -89,5 +103,7 @@ func (c *Channel) LocalAddr() net.Addr {
 
 // IsActive 检查通道是否活跃
 func (c *Channel) IsActive() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.active
 }

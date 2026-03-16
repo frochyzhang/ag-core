@@ -24,6 +24,7 @@ func WithProps(props NettyClientProperties) Option {
 		},
 	}
 }
+
 func AppendHandler(ch ag_netty.ChannelHandler) Option {
 	return Option{
 		opt: func(c *Client) {
@@ -59,6 +60,13 @@ func newClient(logger *slog.Logger, opts ...Option) *Client {
 		ag_netty.ToTimeoutDuration(c.props.IdleTimeout),
 		initFunc,
 	)
+
+	// Wire TLS config from properties
+	if tlsCfg := c.props.TLSConfig(); tlsCfg != nil {
+		client.SetTLSConfig(tlsCfg)
+		slog.Info("ag_netty client TLS enabled", "mode", c.props.TLSMode)
+	}
+
 	c.Client = client
 	return c
 }

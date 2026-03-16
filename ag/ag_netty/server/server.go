@@ -6,14 +6,14 @@ import (
 	"github.com/frochyzhang/ag-core/ag/ag_ext/ip"
 	"github.com/frochyzhang/ag-core/ag/ag_netty"
 	"log/slog"
-	"time"
 )
 
 type Server struct {
 	*ag_netty.Server
-	addr     string
-	handlers []ag_netty.ChannelHandler
-	logger   *slog.Logger
+	addr      string
+	handlers  []ag_netty.ChannelHandler
+	tlsConfig *ag_netty.TLSConfig
+	logger    *slog.Logger
 }
 
 type Option struct {
@@ -27,6 +27,7 @@ func WithAddr(addr string) Option {
 		},
 	}
 }
+
 func AppendHandler(ch ag_netty.ChannelHandler) Option {
 	return Option{
 		opt: func(s *Server) {
@@ -35,7 +36,15 @@ func AppendHandler(ch ag_netty.ChannelHandler) Option {
 	}
 }
 
-func NewServer(logger *slog.Logger, opts ...Option) *Server {
+func WithTLS(cfg *ag_netty.TLSConfig) Option {
+	return Option{
+		opt: func(s *Server) {
+			s.tlsConfig = cfg
+		},
+	}
+}
+
+func NewServer(logger *slog.Logger, opts ...Option) (*Server, error) {
 	s := &Server{
 		handlers: make([]ag_netty.ChannelHandler, 0),
 		logger:   logger,
@@ -54,18 +63,23 @@ func NewServer(logger *slog.Logger, opts ...Option) *Server {
 		}
 	}
 
-	server, err := ag_netty.NewServer(s.addr, initFunc)
+	var serverOpts []ag_netty.ServerOption
+	if s.tlsConfig != nil {
+		serverOpts = append(serverOpts, ag_netty.WithTLS(s.tlsConfig))
+	}
+
+	server, err := ag_netty.NewServer(s.addr, initFunc, serverOpts...)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to create netty server: %w", err)
 	}
 	s.Server = server
-	return s
+	return s, nil
 }
 
 func NewNettyServerWithSuite(
 	suite *NettyOptionSuite,
 	logger *slog.Logger,
-) *Server {
+) (*Server, error) {
 	return NewServer(logger, suite.Options()...)
 }
 
@@ -89,37 +103,36 @@ func (builder *NettySuiteBuilder) BuildSuite() (*NettyOptionSuite, error) {
 
 	host, port, err := findHostPort(builder.NSP)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("failed to resolve host/port: %w", err)
 	}
 
 	addr := fmt.Sprintf("%s:%d", host, port)
-
 	slog.Info("ag_netty", "host", addr)
 	suite.Opts = append(suite.Opts, WithAddr(addr))
+
+	// Wire TLS config from properties
+	if tlsCfg := builder.NSP.TLSConfig(); tlsCfg != nil {
+		suite.Opts = append(suite.Opts, WithTLS(tlsCfg))
+		slog.Info("ag_netty TLS enabled", "mode", builder.NSP.TLSMode)
+	}
 
 	return suite, nil
 }
 
 func (s *Server) Start(ctx context.Context) error {
-	s.logger.Info("ag_netty server start")
+	s.logger.Info("ag_netty server start", "addr", s.Server.Addr())
 	s.Server.Start()
 	return nil
 }
 
 func (s *Server) Stop(ctx context.Context) error {
 	s.logger.Info("ag_netty server shutdown")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
 	s.Server.Shutdown()
-
-	s.logger.Info("Shutting down ag_netty server...")
+	s.logger.Info("ag_netty server stopped")
 	return nil
 }
 
 func findHostPort(conf *NettyServerProperties) (host string, port int, rerr error) {
-	// 服务ip、端口配置
 	host = conf.Host
 	if host == "" {
 		host = "0.0.0.0"
